@@ -1,0 +1,657 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>PIXI Concentration</title>
+		<style>
+			body {
+				margin: 0;
+				padding: 0;
+			}
+		</style>
+		<script src="../../bin/pixi.dev.js"></script>
+	</head>
+	<body>
+		<script>
+
+			var w = 8;
+			var h = 6;
+			var pic_space = 80;
+			var pic_width = 7;
+
+			function Candy(col,row,type) {
+			    
+			    this.speedX = 2;
+			    this.speedY = 2;
+			    this.col = col;
+			    this.row = row;
+			    this.type = type;
+			    this.swapToX = null;
+			    this.swapToY = null;
+			   
+			    this.random = function(){
+			    	return Math.floor(Math.random()*4);
+			    }
+
+			    this.bzeroSwapXY = function(){
+			    	this.swapToX = null;
+			   		this.swapToY = null;
+			    }
+			    
+			    this.checkSwapping = function(){
+			    	return this.swapToX == null && this.swapToY == null;
+			    }
+			    
+			    this.checkPosition = function(){
+			    	//tile.position.x = 7+i*80;
+					//tile.position.y = 7+j*80;
+			    	if(Math.abs(this.col*pic_space+pic_width - this.sprite.position.x) == 0 && Math.abs(this.row*pic_space+pic_width - this.sprite.position.y) == 0 )return true;
+			    	else return false;
+
+			    }
+
+			    this.restorePosition = function(){
+			    	this.sprite.position.x = this.col*pic_space+pic_width;
+			    	this.sprite.position.y = this.row*pic_space+pic_width;
+			    }
+
+			    this.setSwapDest = function(candy){
+			    	
+			    	if(this.checkSwapping() && this.checkPosition()){
+			    		this.swapToX = candy.sprite.position.x;
+			   			this.swapToY = candy.sprite.position.y;
+			    	}
+			    	
+			    }
+
+			    this.moveToDest = function(){
+			    	if(!this.checkSwapping()){
+			    		if(this.swapToX - this.sprite.position.x > 0){
+			    			this.sprite.position.x += this.speedX;
+			    			if(this.swapToX <= this.sprite.position.x)
+			    				this.bzeroSwapXY();
+			    		}
+			    		else if(this.swapToX - this.sprite.position.x < 0){
+			    			this.sprite.position.x -= this.speedX;
+			    			if(this.swapToX >= this.sprite.position.x)
+			    				this.bzeroSwapXY();
+			    		}
+			    		else if(this.swapToY - this.sprite.position.y > 0){
+			    			this.sprite.position.y += this.speedY;
+			    			if(this.swapToY <= this.sprite.position.y)
+			    				this.bzeroSwapXY();
+			    		}
+			    		else if(this.swapToY - this.sprite.position.y < 0){
+			    			this.sprite.position.y -= this.speedY;
+			    			if(this.swapToY >= this.sprite.position.y)
+			    				this.bzeroSwapXY();
+			    		}
+			    		else{
+
+			    			this.bzeroSwapXY();
+			    			//console.log(this.swapToX);
+			    		}
+			    		if(this.speedX<8)this.speedX ++;
+			    		if(this.speedY<8)this.speedY ++;
+			    	}
+			    }
+
+
+			}
+
+			function Tile(){
+
+			}
+
+			function Swap(candyA, candyB){
+				this.candyA = candyA;
+				this.candyB = candyB;
+			}
+
+			function Level(){
+				//
+				this.swap = null;
+				this.swapAnimating = false;
+				this.candies = new Array(h*w);
+				this.tiles = new Array(h*w);
+
+
+				this.tileAt = function(col, row){
+					return tile[col*h+row];
+				}
+				this.candyAt = function(col, row){
+					return candies[col*h+row];
+				}
+				this.shuffle = function(){
+					createInitCandies();
+				}
+
+				this.tileAtCandy = function(tile){
+					for(var row=0;row<h;row++){
+						for(var col=0;col<w;col++){
+							if(this.candies[col*h+row].sprite == tile){
+								return this.candies[col*h+row];
+							}
+						}
+					}
+				}
+
+				//交换位置的动画
+				this.swapAnim = function(){
+					
+					console.log("Swapping");
+						
+					if(this.swap == null)return;
+
+					this.swap.candyA.setSwapDest(this.swap.candyB);
+					this.swap.candyB.setSwapDest(this.swap.candyA);
+
+					if(!this.swap.candyA.checkSwapping() && !this.swap.candyB.checkSwapping()){
+						
+						this.swap.candyA.moveToDest();
+						this.swap.candyB.moveToDest();
+						
+						
+					}else{
+						console.log("done swapping");
+						this.swapAnimating = false;
+						this.swap.candyA.bzeroSwapXY();
+						this.swap.candyB.bzeroSwapXY();
+						this.swapCandies(this.swap.candyA, this.swap.candyB);
+						this.swap.candyA.restorePosition();
+						this.swap.candyB.restorePosition();
+						this.swap = null;
+					}
+
+					
+				}
+
+				//交换tile
+				this.swapTiles = function(firstTile, secondTile){
+
+					firstCandy = this.tileAtCandy(firstTile);
+					secondCandy = this.tileAtCandy(secondTile);
+					this.swap = new Swap(firstCandy, secondCandy);
+					this.swapAnimating = true;
+					//
+				}
+
+				//交换candy的接口
+				this.swapCandies = function(firstCandy, secondCandy){
+					//console.log(firstCandy);
+					var tmp = firstCandy.type;
+					firstCandy.type = secondCandy.type;
+					secondCandy.type = tmp;
+
+					//更新原有的texture
+					firstCandy.sprite.texture = PIXI.TextureCache[firstCandy.type];
+					secondCandy.sprite.texture = PIXI.TextureCache[secondCandy.type];
+					
+					//console.log(firstCandy.sprite);
+					//更新gameContainer来刷新新的图像
+					this.updateContainer();
+
+				}
+
+				//更新gameContainer内的sprite
+				this.updateContainer = function(){
+					//清除所有的sprite
+					gameContainer.removeChildren(0, h*w);
+					//刷新
+					for(var i=0;i<w;i++){
+						for(var j=0;j<h;j++){
+							
+							gameContainer.addChild(this.candies[i*h+j].sprite);
+						}
+					}
+				}
+
+				//判断是否相邻
+				this.checkIfNeighbourTile = function(firstTile, secondTile){
+					//获取candy通过tile
+					firstCandy = this.tileAtCandy(firstTile);
+					secondCandy = this.tileAtCandy(secondTile);
+					
+					//逻辑部分
+					if(Math.abs(firstCandy.col - secondCandy.col)<2 && firstCandy.row - secondCandy.row == 0 )return true;
+					else if(Math.abs(firstCandy.row - secondCandy.row)<2 && firstCandy.col - secondCandy.col == 0 )return true;
+					else return false;
+				}
+
+				//初始化candy数组
+				this.createInitCandies = function(){
+					for(var row=0;row<h;row++){
+						for(var col=0;col<w;col++){
+							var type;
+							//确保初始化时候没有连起来的candy
+							do{
+								type = Math.floor(Math.random()*4);
+							}while((col >= 2 && this.candies[(col-1)*h+row].type == type && this.candies[(col-2)*h+row].type == type) || (row >= 2 && this.candies[col*h+row-1].type == type && this.candies[col*h+row-2].type == type) )
+
+							var candy = new Candy(col, row, type);
+							this.candies[col*h+row] = candy;
+						}
+					}
+				}
+			}
+
+
+			function addSpritesForCandies(candies){
+				for(var i=0;i<w;i++){
+					for(var j=0;j<h;j++){
+						var tile = PIXI.Sprite.fromFrame(candies[i*h+j]);
+						// buttonmode+interactive = acts like a button
+						tile.type = candies[i*h+j].type;
+						tile.i = i;
+						tile.j = j;
+						tile.drop_anim = false;
+						tile.speed = 1;
+						tile.buttonMode=true;
+						tile.interactive = true;
+						// is the tile selected?
+						tile.isSelected=false;
+						// set a tile value
+						tile.theVal=chosenTiles[i*6+j]
+						// place the tile
+						tile.position.x = 7+i*80;
+						tile.position.y = 7+j*80;
+						// paint tile black
+						//tile.tint = 0x000000;
+						// set it a bit transparent (it will look grey)
+						tile.alpha=0.5;
+						// add the tile
+						candies[i].sprite = tile;
+						gameContainer.addChild(tile);
+					}
+				}
+			}
+
+			function addTileToContainer(level){
+				for(i=0;i<w;i++){
+					for(j=0;j<h;j++){
+
+						gameContainer.addChild(level.candies[i*h+j].sprite);
+					}
+				}
+
+			}
+
+			
+			// first tile picked up by the player
+			var firstTile=null;
+			// second tile picked up by the player
+			var secondTile=null;
+			// can the player pick up a tile?
+			var canPick=true;
+			// create an new instance of a pixi stage with a grey background
+			var stage = new PIXI.Stage(0x888888);
+			// create a renderer instance width=640 height=480
+			var renderer = PIXI.autoDetectRenderer(640,480);
+			// importing a texture atlas created with texturepacker
+			var tileAtlas = ["images.json"];
+			// create a new loader
+			var loader = new PIXI.AssetLoader(tileAtlas);
+			// create an empty container
+			var gameContainer = new PIXI.DisplayObjectContainer();
+			//创建一个新的level
+			var level = new Level();
+
+			var chosenTiles=new Array();
+			var switch_anim_left = false;
+			var switch_anim_right = false;
+			var switch_anim_up = false;
+			var switch_anim_down = false;
+			var drop_anim = false;
+			var tiles_move_diff = [];
+			set_tiles_diff_zero();
+			// add the container to the stage
+     		stage.addChild(gameContainer);
+     		// add the renderer view element to the DOM
+			document.body.appendChild(renderer.view);
+			// use callback
+			loader.onComplete = onTilesLoaded
+			//begin load
+			loader.load();	
+			function onTilesLoaded(){
+				
+				
+				level.createInitCandies();
+				console.log(level.candies);
+				// choose 24 random tile images
+				
+				while(chosenTiles.length<48){
+
+					var candidate=Math.floor(Math.random()*4);
+
+					chosenTiles.push(candidate)
+
+					//if(chosenTiles.indexOf(candidate)==-1){
+						//chosenTiles.push(candidate,candidate)
+					//}			
+				}
+				// shuffle the chosen tiles
+				/*
+				for(i=0;i<96;i++){
+					var from = Math.floor(Math.random()*48);
+					var to = Math.floor(Math.random()*48);
+					var tmp = chosenTiles[from];
+					chosenTiles[from]=chosenTiles[to];
+					chosenTiles[to]=tmp;
+				}*/
+				// place down tiles
+				for(i=0;i<w;i++){
+					for(j=0;j<h;j++){
+						// new sprite
+						var tile = PIXI.Sprite.fromFrame(level.candies[i*h+j].type);
+						// buttonmode+interactive = acts like a button
+						tile.type = level.candies[i*h+j].type;
+						tile.i = i;
+						tile.j = j;
+						tile.drop_anim = false;
+						tile.speed = 1;
+						tile.buttonMode=true;
+						tile.interactive = true;
+						// is the tile selected?
+						tile.isSelected=false;
+						// set a tile value
+						tile.theVal=chosenTiles[i*6+j]
+						// place the tile
+						tile.position.x = 7+i*80;
+						tile.position.y = 7+j*80;
+						// paint tile black
+						//tile.tint = 0x000000;
+						// set it a bit transparent (it will look grey)
+						tile.alpha=0.5;
+						// add the tile
+						level.candies[i*h+j].sprite = tile;
+						// mouse-touch listener
+						tile.mousedown = tile.touchstart = function(data){
+							// can I pick a tile?
+							if(canPick) {
+							     // is the tile already selected?
+								if(!this.isSelected){
+									// set the tile to selected
+									this.isSelected = true;
+									// show the tile
+				      				this.tint = 0xffffff;
+				      				//this.blendMode = PIXI.blendModes.ADD
+									this.alpha = 1;
+									// is it the first tile we uncover?
+									if(firstTile==null){
+										firstTile=this
+									}
+									// this is the second tile
+									else{
+										secondTile=this
+										// can't pick anymore
+										canPick=false;
+										//switch_pos(firstTile, secondTile);
+
+										if(level.checkIfNeighbourTile(firstTile, secondTile))
+										level.swapTiles(firstTile, secondTile);
+
+										setTimeout(function(){
+											canPick=true;
+											firstTile.alpha=0.5;
+								 			secondTile.alpha=0.5;
+								 			firstTile.isSelected=false;
+								 			secondTile.isSelected=false;
+								 			firstTile=null;
+											secondTile=null;
+											switch_anim = false;
+											//check_tiles_all()
+										},500);
+										//console.log(chosenTiles);
+										//firstTile.position.x += 10
+										//firstTile.tint = 0x000000;
+								 		//secondTile.tint = 0x000000;
+										//canPick=true;
+										// did we pick the same tiles?
+										/*
+										if(firstTile.theVal==secondTile.theVal){
+											// wait a second then remove the tiles and make the player able to pick again
+											setTimeout(function(){
+												gameContainer.removeChild(firstTile);
+												gameContainer.removeChild(secondTile);
+												firstTile=null;
+												secondTile=null;
+												canPick=true;
+											},1000);
+										}
+										// we picked different tiles
+										else{
+											// wait a second then cover the tiles and make the player able to pick again
+								 			setTimeout(function(){
+								 				firstTile.isSelected=false
+								 				secondTile.isSelected=false
+								 				//firstTile.tint = 0x000000;
+								 				//secondTile.tint = 0x000000;
+								 				firstTile.alpha=0.5;
+								 				secondTile.alpha=0.5;
+								 				firstTile=null;
+												secondTile=null;
+												canPick=true	
+								 			},1000);
+								 		
+										}*/
+									}	
+								}
+							}
+						}
+					}
+				}
+				addTileToContainer(level); 
+				requestAnimFrame(animate);
+			}
+			function animate() {
+
+				requestAnimFrame(animate);
+
+				if(level.swapAnimating){
+					level.swapAnim();
+				}
+
+				renderer.render(stage);
+			}
+			function get_tiles_upward(tiles){
+				var res = []
+				
+
+				for(var i=0; i<tiles.length; i++){
+					_i = tiles[i].i;
+					_j = tiles[i].j;
+					for(var j=_j-1;j>=0;j--){
+						var tmp_tile = gameContainer.getChildAt(_i*6+j);
+						if(tmp_tile.alpha == 0.5)
+							res.push(tmp_tile);
+					}
+				}
+				var res_set = new Set(res);
+				var res_final = [];
+				res_set.forEach(function(value) {
+				  res_final.push(value);
+				});
+				return res_final;
+			}
+			function set_tiles_diff_zero(){
+				for(var i=0;i<w*h;i++){
+						tiles_move_diff[i] = 0;
+				}
+			}
+			
+			function check_tiles_diff(){
+				
+					for(var i=0;i<w;i++){
+						for(var j=0; j<h-1;j++){
+
+							tile = gameContainer.getChildAt(i*6+j);
+
+							tile_next = gameContainer.getChildAt(i*6+j+1);
+							if(chosenTiles[i*6+j+1]==-1){
+								console.log(tile.position.y +" "+ tile_next.position.y)
+								tile.alpha = 1.0;
+								tile_next.alpha = 1.0;
+							}
+							if(chosenTiles[i*6+j+1]==-1 && tile.position.y < tile_next.position.y){
+								return false;
+							}
+
+						}
+						//if(tiles_move_diff[i]  80 && tiles_move_diff[i] != 0)return false;
+					}
+					return true;
+			}
+
+
+			function remove_blocks(markTiles){
+				console.log(markTiles);
+				for(j=5;j>=0;j--){
+					for(i=0;i<8;i++){
+						if(markTiles[i*6+j] != -1){
+							//var tile = gameContainer.getChildAt(i*6+j);
+							//gameContainer.removeChild(tile);
+						}
+					}
+				}
+
+			}
+
+			
+			//main function for tiles checking 
+			function check_tiles(my_tile){
+				i = 0;
+				j = 0;
+				var counter = 0;
+				var markTiles_x = [];
+				var markTiles_y = [];
+				for(i=0;i<8;i++){
+					for(j=0;j<6;j++){
+						markTiles_x[i*6+j] = -1;
+						markTiles_y[i*6+j] = -1;
+						//var tile = gameContainer.getChildAt(i*6+j);
+						//tile.alpha = 0.5;
+					}
+				}
+				i = my_tile.i;
+				j = my_tile.j;
+				//console.log(my_tile);
+				var tile_val = chosenTiles[i*6+j];
+				console.log("checking:"+i+" "+j+" "+tile_val);
+				var h_count = 0;
+				//check_recur_x(i,j, markTiles_x, tile_val, h_count, i, j);
+				var v_count = 0;
+				//check_recur_y(i,j, markTiles_y, tile_val, v_count, i, j);
+				//console.log(markTiles_y);
+				count_x = check_tile_x(my_tile, markTiles_x);
+				count_y = check_tile_y(my_tile, markTiles_y);
+				console.log(count_x + "\t" + count_y);
+				console.log("x: "+markTiles_x);
+
+				//case for specials:
+				//normal case for x-axis
+				if(count_x > 2 && count_y <= 2){
+					remove_refill(markTiles_x);
+				}
+				//normal case for y-axis
+				if(count_y > 2 && count_x <= 2){
+					remove_refill(markTiles_y);
+				}
+
+
+				//check_tiles_all();
+			
+			}
+
+			function remove_refill(_mark){
+				var index = 0;
+				console.log(_mark);
+				console.log(chosenTiles);
+				while(index < w*h){
+					var val = _mark[index];
+					if(val != -1){
+						//var tile = gameContainer.getChildAt(index);
+						//tile.alpha = 0;
+						drop_anim = true;
+						//gameContainer.removeChild(val);
+
+						chosenTiles[index] = -1;
+					}
+					index ++;
+				}
+				console.log(chosenTiles);
+
+			}
+
+			function check_tile_x(_tile, _mark){
+				var _i = _tile.i;
+				var _j = _tile.j;
+				var val = chosenTiles[_i*6+_j];
+				var index = _i+1;
+				var count = 1;
+				_mark[_i*6+_j] = _tile;
+
+				while(w > index){
+					//console.log("Visiting "+index);
+					if(val != chosenTiles[index*6+_j])break;
+					var tile = gameContainer.getChildAt(index*6+_j);
+					//tile.alpha = 1.0;
+					_mark[index*6+_j] = tile;
+					count ++;
+					index ++;	
+					
+				}
+				index = _i-1;
+				while(0 <= index){
+					//console.log("Visiting "+index);
+					if(val != chosenTiles[index*6+_j])break;
+					var tile = gameContainer.getChildAt(index*6+_j);
+					//tile.alpha = 1.0;
+					_mark[index*6+_j] = tile;
+					count ++;
+					index --;
+					
+				}
+				return count;
+
+			}
+
+			function check_tile_y(_tile, _mark){
+				var _i = _tile.i;
+				var _j = _tile.j;
+				var val = chosenTiles[_i*6+_j];
+				var index = _j+1;
+				count = 1;
+				_mark[_i*6+_j] = _tile;
+
+				while(h > index){
+					//console.log("Visiting "+index);
+					if(val != chosenTiles[_i*6+index])break;
+					var tile = gameContainer.getChildAt(_i*6+index);
+					//tile.alpha = 1.0;	
+					_mark[_i*6+index] = tile;
+					count ++;
+					index ++;
+				}
+				index = _j-1;
+				while(0 <= index){
+					//console.log("Visiting "+index);
+					if(val != chosenTiles[_i*6+index])break;
+					var tile = gameContainer.getChildAt(_i*6+index);
+					//tile.alpha = 1.0;
+					_mark[_i*6+index] = tile;
+					count ++;
+					index --;
+				}
+				return count;
+
+			}
+
+			function switch_pos(firstTile, secondTile){
+				//var tmp = firstTile.position;
+				//firstTile.position = secondTile.position;
+				//secondTile.position = tmp;
+				
+				
+			}
+		</script>
+	</body>
+</html>
