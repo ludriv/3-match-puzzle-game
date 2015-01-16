@@ -17,6 +17,15 @@
 			var h = 6;
 			var pic_space = 80;
 			var pic_width = 7;
+			var love_array = [
+
+				0,0,1,1,0,1,1,0,
+				0,1,1,1,1,1,1,1,
+				0,1,1,1,1,1,1,1,
+				0,0,1,1,1,1,1,0,
+				0,0,0,1,1,1,0,0,
+				0,0,0,0,1,0,0,0
+			]
 
 			function Candy(col,row,type) {
 			    
@@ -57,6 +66,8 @@
 			    this.setSwapDest = function(candy){
 			    	
 			    	if(this.checkSwapping() && this.checkPosition()){
+			    		this.speedX = 2;
+			    		this.speedY = 2;
 			    		this.swapToX = candy.sprite.position.x;
 			   			this.swapToY = candy.sprite.position.y;
 			    	}
@@ -88,6 +99,7 @@
 			    		else{
 
 			    			this.bzeroSwapXY();
+			    			
 			    			//console.log(this.swapToX);
 			    		}
 			    		if(this.speedX<8)this.speedX ++;
@@ -113,7 +125,28 @@
 				this.swapAnimating = false;
 				this.candies = new Array(h*w);
 				this.tiles = new Array(h*w);
+				this.possibleSwaps = new Set();
 
+				//检测可行的swaps
+				this.detectPossibleSwaps = function(col, row){
+
+				}
+
+				//检测有没有可以消除的candy在col,row的位置
+				this.hasChainAt = function(col, row){
+					var candyType = this.candies[col*h+row].type;
+					//横向检测
+					var horzLength = 1;
+					for(var i=col-1;i>=0 && this.candies[i*h+row].type == candyType; --i, ++horzLength){}
+					for(var i=col+1;i<w && this.candies[i*h+row].type == candyType; ++i, ++horzLength){}
+					if(horzLength >= 3){return true;}
+					//纵向检测
+					var vertLength = 1;
+					for(var i=row-1;i>=0 && this.candies[col*h+i].type == candyType; --i, ++vertLength){}
+					for(var i=row+1;i<h && this.candies[col*h+i].type == candyType; ++i, ++vertLength){}
+					return vertLength >= 3;
+
+				}
 
 				this.tileAt = function(col, row){
 					return tile[col*h+row];
@@ -223,9 +256,13 @@
 						for(var col=0;col<w;col++){
 							var type;
 							//确保初始化时候没有连起来的candy
+							
 							do{
 								type = Math.floor(Math.random()*4);
 							}while((col >= 2 && this.candies[(col-1)*h+row].type == type && this.candies[(col-2)*h+row].type == type) || (row >= 2 && this.candies[col*h+row-1].type == type && this.candies[col*h+row-2].type == type) )
+							
+
+							//type = love_array[col+row*w];
 
 							var candy = new Candy(col, row, type);
 							this.candies[col*h+row] = candy;
@@ -302,7 +339,7 @@
 			var switch_anim_down = false;
 			var drop_anim = false;
 			var tiles_move_diff = [];
-			set_tiles_diff_zero();
+			
 			// add the container to the stage
      		stage.addChild(gameContainer);
      		// add the renderer view element to the DOM
@@ -452,206 +489,8 @@
 
 				renderer.render(stage);
 			}
-			function get_tiles_upward(tiles){
-				var res = []
-				
-
-				for(var i=0; i<tiles.length; i++){
-					_i = tiles[i].i;
-					_j = tiles[i].j;
-					for(var j=_j-1;j>=0;j--){
-						var tmp_tile = gameContainer.getChildAt(_i*6+j);
-						if(tmp_tile.alpha == 0.5)
-							res.push(tmp_tile);
-					}
-				}
-				var res_set = new Set(res);
-				var res_final = [];
-				res_set.forEach(function(value) {
-				  res_final.push(value);
-				});
-				return res_final;
-			}
-			function set_tiles_diff_zero(){
-				for(var i=0;i<w*h;i++){
-						tiles_move_diff[i] = 0;
-				}
-			}
-			
-			function check_tiles_diff(){
-				
-					for(var i=0;i<w;i++){
-						for(var j=0; j<h-1;j++){
-
-							tile = gameContainer.getChildAt(i*6+j);
-
-							tile_next = gameContainer.getChildAt(i*6+j+1);
-							if(chosenTiles[i*6+j+1]==-1){
-								console.log(tile.position.y +" "+ tile_next.position.y)
-								tile.alpha = 1.0;
-								tile_next.alpha = 1.0;
-							}
-							if(chosenTiles[i*6+j+1]==-1 && tile.position.y < tile_next.position.y){
-								return false;
-							}
-
-						}
-						//if(tiles_move_diff[i]  80 && tiles_move_diff[i] != 0)return false;
-					}
-					return true;
-			}
-
-
-			function remove_blocks(markTiles){
-				console.log(markTiles);
-				for(j=5;j>=0;j--){
-					for(i=0;i<8;i++){
-						if(markTiles[i*6+j] != -1){
-							//var tile = gameContainer.getChildAt(i*6+j);
-							//gameContainer.removeChild(tile);
-						}
-					}
-				}
-
-			}
 
 			
-			//main function for tiles checking 
-			function check_tiles(my_tile){
-				i = 0;
-				j = 0;
-				var counter = 0;
-				var markTiles_x = [];
-				var markTiles_y = [];
-				for(i=0;i<8;i++){
-					for(j=0;j<6;j++){
-						markTiles_x[i*6+j] = -1;
-						markTiles_y[i*6+j] = -1;
-						//var tile = gameContainer.getChildAt(i*6+j);
-						//tile.alpha = 0.5;
-					}
-				}
-				i = my_tile.i;
-				j = my_tile.j;
-				//console.log(my_tile);
-				var tile_val = chosenTiles[i*6+j];
-				console.log("checking:"+i+" "+j+" "+tile_val);
-				var h_count = 0;
-				//check_recur_x(i,j, markTiles_x, tile_val, h_count, i, j);
-				var v_count = 0;
-				//check_recur_y(i,j, markTiles_y, tile_val, v_count, i, j);
-				//console.log(markTiles_y);
-				count_x = check_tile_x(my_tile, markTiles_x);
-				count_y = check_tile_y(my_tile, markTiles_y);
-				console.log(count_x + "\t" + count_y);
-				console.log("x: "+markTiles_x);
-
-				//case for specials:
-				//normal case for x-axis
-				if(count_x > 2 && count_y <= 2){
-					remove_refill(markTiles_x);
-				}
-				//normal case for y-axis
-				if(count_y > 2 && count_x <= 2){
-					remove_refill(markTiles_y);
-				}
-
-
-				//check_tiles_all();
-			
-			}
-
-			function remove_refill(_mark){
-				var index = 0;
-				console.log(_mark);
-				console.log(chosenTiles);
-				while(index < w*h){
-					var val = _mark[index];
-					if(val != -1){
-						//var tile = gameContainer.getChildAt(index);
-						//tile.alpha = 0;
-						drop_anim = true;
-						//gameContainer.removeChild(val);
-
-						chosenTiles[index] = -1;
-					}
-					index ++;
-				}
-				console.log(chosenTiles);
-
-			}
-
-			function check_tile_x(_tile, _mark){
-				var _i = _tile.i;
-				var _j = _tile.j;
-				var val = chosenTiles[_i*6+_j];
-				var index = _i+1;
-				var count = 1;
-				_mark[_i*6+_j] = _tile;
-
-				while(w > index){
-					//console.log("Visiting "+index);
-					if(val != chosenTiles[index*6+_j])break;
-					var tile = gameContainer.getChildAt(index*6+_j);
-					//tile.alpha = 1.0;
-					_mark[index*6+_j] = tile;
-					count ++;
-					index ++;	
-					
-				}
-				index = _i-1;
-				while(0 <= index){
-					//console.log("Visiting "+index);
-					if(val != chosenTiles[index*6+_j])break;
-					var tile = gameContainer.getChildAt(index*6+_j);
-					//tile.alpha = 1.0;
-					_mark[index*6+_j] = tile;
-					count ++;
-					index --;
-					
-				}
-				return count;
-
-			}
-
-			function check_tile_y(_tile, _mark){
-				var _i = _tile.i;
-				var _j = _tile.j;
-				var val = chosenTiles[_i*6+_j];
-				var index = _j+1;
-				count = 1;
-				_mark[_i*6+_j] = _tile;
-
-				while(h > index){
-					//console.log("Visiting "+index);
-					if(val != chosenTiles[_i*6+index])break;
-					var tile = gameContainer.getChildAt(_i*6+index);
-					//tile.alpha = 1.0;	
-					_mark[_i*6+index] = tile;
-					count ++;
-					index ++;
-				}
-				index = _j-1;
-				while(0 <= index){
-					//console.log("Visiting "+index);
-					if(val != chosenTiles[_i*6+index])break;
-					var tile = gameContainer.getChildAt(_i*6+index);
-					//tile.alpha = 1.0;
-					_mark[_i*6+index] = tile;
-					count ++;
-					index --;
-				}
-				return count;
-
-			}
-
-			function switch_pos(firstTile, secondTile){
-				//var tmp = firstTile.position;
-				//firstTile.position = secondTile.position;
-				//secondTile.position = tmp;
-				
-				
-			}
 		</script>
 	</body>
 </html>
