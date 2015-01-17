@@ -13,8 +13,8 @@
 	<body>
 		<script>
 
-			var w = 8;
-			var h = 6;
+			var w = 3;
+			var h = 3;
 			var pic_space = 80;
 			var pic_width = 7;
 			var love_array = [
@@ -127,9 +127,75 @@
 				this.tiles = new Array(h*w);
 				this.possibleSwaps = new Set();
 
-				//检测可行的swaps
-				this.detectPossibleSwaps = function(col, row){
 
+				this.possibleSwapsHas = function(myswap){
+					
+				}
+
+				//检测可行的swaps
+				this.detectPossibleSwaps = function(){
+					var myset = new Set();
+					
+					for(var row=0;row<h;row++){
+						for(var col=0;col<w;col++){
+
+							var cur = this.candies[col*h+row];
+							
+							if(col < w-1){
+
+								var other = this.candies[(col+1)*h+row];
+								
+								//console.log(other.type + " " + cur.type);
+								this.candies[col*h+row].type = other.sprite.type;
+								this.candies[(col+1)*h+row].type = cur.sprite.type;
+								//console.log(other.type + " " + cur.type);
+
+								if(this.hasChainAt(col+1, row) || this.hasChainAt(col, row)){
+
+									var myswap = new Swap(cur, other);
+									
+									myset.add(myswap);
+									//level.swapTiles(cur.sprite, other.sprite);
+								
+								}
+
+								this.candies[col*h+row].type = this.candies[col*h+row].sprite.type;
+								this.candies[(col+1)*h+row].type = this.candies[(col+1)*h+row].sprite.type;
+								
+								//console.log(other.type + " " + cur.type);
+							}	
+
+
+
+							if(row < h-1){
+
+								var other = this.candies[col*h+row+1];
+								
+								//console.log(other.type + " " + cur.type);
+								this.candies[col*h+row].type = other.sprite.type;
+								this.candies[col*h+row+1].type = cur.sprite.type;
+								//console.log(other.type + " " + cur.type);
+
+								if(this.hasChainAt(col, row+1) || this.hasChainAt(col, row)){
+
+									var myswap = new Swap(cur, other);
+									
+									myset.add(myswap);
+									//level.swapTiles(cur.sprite, other.sprite);
+								
+								}
+
+								this.candies[col*h+row].type = this.candies[col*h+row].sprite.type;
+								this.candies[col*h+row+1].type = this.candies[col*h+row+1].sprite.type;
+								
+								//console.log(other.type + " " + cur.type);
+							}	
+
+
+						}
+					}
+
+					this.possibleSwaps = myset;
 				}
 
 				//检测有没有可以消除的candy在col,row的位置
@@ -287,7 +353,7 @@
 						// is the tile selected?
 						tile.isSelected=false;
 						// set a tile value
-						tile.theVal=chosenTiles[i*6+j]
+						tile.theVal=chosenTiles[i*h+j]
 						// place the tile
 						tile.position.x = 7+i*80;
 						tile.position.y = 7+j*80;
@@ -322,7 +388,7 @@
 			// create an new instance of a pixi stage with a grey background
 			var stage = new PIXI.Stage(0x888888);
 			// create a renderer instance width=640 height=480
-			var renderer = PIXI.autoDetectRenderer(640,480);
+			var renderer = PIXI.autoDetectRenderer(80*w,80*h);
 			// importing a texture atlas created with texturepacker
 			var tileAtlas = ["images.json"];
 			// create a new loader
@@ -355,7 +421,7 @@
 				console.log(level.candies);
 				// choose 24 random tile images
 				
-				while(chosenTiles.length<48){
+				while(chosenTiles.length<h*w){
 
 					var candidate=Math.floor(Math.random()*4);
 
@@ -390,7 +456,7 @@
 						// is the tile selected?
 						tile.isSelected=false;
 						// set a tile value
-						tile.theVal=chosenTiles[i*6+j]
+						tile.theVal=chosenTiles[i*h+j]
 						// place the tile
 						tile.position.x = 7+i*80;
 						tile.position.y = 7+j*80;
