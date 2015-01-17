@@ -12,7 +12,7 @@
 	</head>
 	<body>
 		<script>
-
+			//矩阵大小
 			var w = 3;
 			var h = 3;
 			var pic_space = 80;
@@ -129,13 +129,13 @@
 
 
 				this.possibleSwapsHas = function(myswap){
-					
+
 				}
 
 				//检测可行的swaps
 				this.detectPossibleSwaps = function(){
 					var myset = new Set();
-					
+					var buf="";for(var i=0;i<9;i++)buf+=level.candies[i].type;console.log(buf);
 					for(var row=0;row<h;row++){
 						for(var col=0;col<w;col++){
 
@@ -280,6 +280,10 @@
 					var tmp = firstCandy.type;
 					firstCandy.type = secondCandy.type;
 					secondCandy.type = tmp;
+
+					//更新candy sprite里储存的type信息
+					firstCandy.sprite.type = firstCandy.type;
+					secondCandy.sprite.type = secondCandy.type;
 
 					//更新原有的texture
 					firstCandy.sprite.texture = PIXI.TextureCache[firstCandy.type];
