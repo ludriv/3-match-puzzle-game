@@ -17,6 +17,8 @@
 			var h = 3;
 			var pic_space = 80;
 			var pic_width = 7;
+			var offset = 35;
+
 			var love_array = [
 
 				0,0,1,1,0,1,1,0,
@@ -26,6 +28,16 @@
 				0,0,0,1,1,1,0,0,
 				0,0,0,0,1,0,0,0
 			]
+
+			var array_1 = [
+
+				0,1,1,1,0,0,
+				0,0,1,0,0,0,
+				0,0,1,0,0,0,
+				0,0,1,0,0,0,
+				0,1,1,1,0,0
+			]
+
 
 			function Candy(col,row,type) {
 			    
@@ -53,14 +65,26 @@
 			    this.checkPosition = function(){
 			    	//tile.position.x = 7+i*80;
 					//tile.position.y = 7+j*80;
-			    	if(Math.abs(this.col*pic_space+pic_width - this.sprite.position.x) == 0 && Math.abs(this.row*pic_space+pic_width - this.sprite.position.y) == 0 )return true;
+			    	if(Math.abs(this.col*pic_space+pic_width+offset - this.sprite.position.x) == 0 && Math.abs(this.row*pic_space+pic_width+offset - this.sprite.position.y) == 0 )return true;
 			    	else return false;
 
 			    }
 
+			    this.checkScale = function(){
+			    	if(this.sprite.scale.x > 0 && this.sprite.scale.y > 0)return true;
+			    	else return false;
+			    }
+
+			    this.scaleDown = function(){
+			    	if(this.checkScale()){
+			    		this.sprite.scale.x -= 0.1;
+			    		this.sprite.scale.y -= 0.1;
+			    	}
+			    }
+
 			    this.restorePosition = function(){
-			    	this.sprite.position.x = this.col*pic_space+pic_width;
-			    	this.sprite.position.y = this.row*pic_space+pic_width;
+			    	this.sprite.position.x = this.col*pic_space+pic_width+offset;
+			    	this.sprite.position.y = this.row*pic_space+pic_width+offset;
 			    }
 
 			    this.setSwapDest = function(candy){
@@ -109,33 +133,114 @@
 
 
 			}
-
+			//tile类
 			function Tile(){
 
 			}
-
+			//swap类
 			function Swap(candyA, candyB){
 				this.candyA = candyA;
 				this.candyB = candyB;
 			}
 
+			//chain类
+			function Chain(mychainType){
+				this.candies = new Array();
+				
+				//chain type: 1 for horizontal
+				//			  2 for vertical
+
+				this.chainType = mychainType;
+				
+				this.setType = function(chainType){
+					this.chainType = chainType;
+				}
+
+				this.addCandy = function(candy){
+					this.candies.push(candy);
+				}
+				this.firstCandy = function(){
+					return this.candies[0];
+				}
+				this.lastCandy = function(){
+					return this.candies[this.candies.length - 1]
+				}
+
+			}
+			//level类
 			function Level(){
 				//
 				this.swap = null;
 				this.swapAnimating = false;
+				this.removeAnimating = false;
+				this.removeChains = null;
 				this.candies = new Array(h*w);
 				this.tiles = new Array(h*w);
 				this.possibleSwaps = new Set();
 
+				//检测横向的match
+				this.detectHorizontalMatches = function(){
+					var res = new Set();
+					for(var row=0; row<h; row++){
+						for(var col=0; col<w-2;){
+							var cur = this.candies[col*h+row];
+							var type = cur.type;
+							if(this.candies[(col+1)*h+row].type == type && this.candies[(col+2)*h+row].type == type){
+								var chain = new Chain(1);
+								do{
+									chain.addCandy(this.candies[col*h+row]);
+									++col;		
+								}while(col<w && this.candies[col*h+row].type == type)
+								
+								res.add(chain);
+								continue;
+							}
+							++col;
+						}
+					}
+					return res;
+				}
+				//检测纵向的match
+				this.detectVerticalMatches = function(){
+					var res = new Set();
+					for(var col=0; col<w; col++){
+						for(var row=0; row<h-2;){
+							var cur = this.candies[col*h+row];
+							var type = cur.type;
+							if(this.candies[col*h+row+1].type == type && this.candies[col*h+row+2].type == type){
+								var chain = new Chain(2);
+								do{
+									chain.addCandy(this.candies[col*h+row]);
+									++row;		
+								}while(row<h && this.candies[col*h+row].type == type)
+								
+								res.add(chain);
+								continue;
+							}
+							++row;
+						}
+					}
+					return res;
+				}
 
-				this.possibleSwapsHas = function(myswap){
+				this.removeMatches = function(){
 
+					var horizontalChains = this.detectHorizontalMatches();
+					var verticalChains = this.detectVerticalMatches();
+					//console.log(horizontalChains);
+					//console.log(verticalChains);
+					
+					horizontalChains.forEach(function(chain) {
+						verticalChains.add(chain);
+
+					});
+					return verticalChains;
 				}
 
 				//检测可行的swaps
 				this.detectPossibleSwaps = function(){
 					var myset = new Set();
-					var buf="";for(var i=0;i<9;i++)buf+=level.candies[i].type;console.log(buf);
+					//var buf="";for(var i=0;i<9;i++)buf+=level.candies[i].type;console.log(buf);
 					for(var row=0;row<h;row++){
 						for(var col=0;col<w;col++){
 
@@ -215,10 +320,10 @@
 				}
 
 				this.tileAt = function(col, row){
-					return tile[col*h+row];
+					return this.tile[col*h+row];
 				}
 				this.candyAt = function(col, row){
-					return candies[col*h+row];
+					return this.candies[col*h+row];
 				}
 				this.shuffle = function(){
 					createInitCandies();
@@ -251,16 +356,93 @@
 						
 						
 					}else{
+
 						console.log("done swapping");
 						this.swapAnimating = false;
 						this.swap.candyA.bzeroSwapXY();
 						this.swap.candyB.bzeroSwapXY();
+						//交换candy的逻辑部分
 						this.swapCandies(this.swap.candyA, this.swap.candyB);
+						//位置复位
 						this.swap.candyA.restorePosition();
 						this.swap.candyB.restorePosition();
 						this.swap = null;
-					}
 
+						//handle matches after the swap animation is done
+						this.handleMatches();
+					}
+	
+				}
+
+
+				this.removeMatchesAnim = function(){
+					//console.log("hello");
+					var chains = this.removeChains;
+					var total_chains_num = chains.size;
+					console.log(total_chains_num);
+					chains.forEach(function(chain) {
+						var count = 0;
+						for(var i=0;i<chain.candies.length;i++){
+							
+							var cur = chain.candies[i];
+							var candy = level.candyAt(cur.col, cur.row);
+
+							//console.log("Shrinking");
+							candy.scaleDown();
+							if(candy.checkScale() == false){
+								count ++;
+								if(candy.sprite.scale.x < 0 || candy.sprite.scale.y < 0){
+									candy.sprite.scale.x = candy.sprite.scale.y = 0;
+								}
+							}
+						}
+						if(count == chain.candies.length)total_chains_num--;
+
+					});
+					console.log(total_chains_num);
+					if(total_chains_num == 0){
+						this.removeAnimating = false;
+						this.removeChains = null;
+					}
+				}
+
+				this.handleMatches = function(){
+					
+					var chains = this.removeMatches();
+					console.log(chains);
+					
+					this.removeChains = chains;
+					this.removeAnimating = true;
+					//this.removeCandies(chains);
+				}
+
+
+
+				this.removeCandies = function(chains){
+
+					chains.forEach(function(chain) {
+						
+						for(var i=0;i<chain.candies.length;i++){
+							console.log(chain.candies[i]);
+							var cur = chain.candies[i];
+							//maybe wrong here??
+							this.candies[cur.col*h+cur.row] = null;
+						}
+
+					});
+				}
+
+				this.possibleSwapsHas = function(myswap){
+					var flag = false;
+					this.possibleSwaps.forEach(function(swap) {
+						//console.log(myswap.candyA);
+						//console.log(swap.candyA);
+						//console.log(myswap.candyB);
+						//console.log(swap.candyB);
+						if(myswap.candyA == swap.candyA && myswap.candyB == swap.candyB)flag = true;
+						if(myswap.candyA == swap.candyB && myswap.candyB == swap.candyA)flag = true;
+					});
+					return flag;
 					
 				}
 
@@ -270,7 +452,13 @@
 					firstCandy = this.tileAtCandy(firstTile);
 					secondCandy = this.tileAtCandy(secondTile);
 					this.swap = new Swap(firstCandy, secondCandy);
-					this.swapAnimating = true;
+					//检测可能的swaps
+					this.detectPossibleSwaps();
+					if(this.possibleSwapsHas(this.swap)){
+						//交换candies的动画开始
+						this.swapAnimating = true;
+					}
+					
 					//
 				}
 
@@ -341,36 +529,6 @@
 				}
 			}
 
-
-			function addSpritesForCandies(candies){
-				for(var i=0;i<w;i++){
-					for(var j=0;j<h;j++){
-						var tile = PIXI.Sprite.fromFrame(candies[i*h+j]);
-						// buttonmode+interactive = acts like a button
-						tile.type = candies[i*h+j].type;
-						tile.i = i;
-						tile.j = j;
-						tile.drop_anim = false;
-						tile.speed = 1;
-						tile.buttonMode=true;
-						tile.interactive = true;
-						// is the tile selected?
-						tile.isSelected=false;
-						// set a tile value
-						tile.theVal=chosenTiles[i*h+j]
-						// place the tile
-						tile.position.x = 7+i*80;
-						tile.position.y = 7+j*80;
-						// paint tile black
-						//tile.tint = 0x000000;
-						// set it a bit transparent (it will look grey)
-						tile.alpha=0.5;
-						// add the tile
-						candies[i].sprite = tile;
-						gameContainer.addChild(tile);
-					}
-				}
-			}
 
 			function addTileToContainer(level){
 				for(i=0;i<w;i++){
@@ -462,8 +620,10 @@
 						// set a tile value
 						tile.theVal=chosenTiles[i*h+j]
 						// place the tile
-						tile.position.x = 7+i*80;
-						tile.position.y = 7+j*80;
+						tile.position.x = 7+i*80 + offset;
+						tile.position.y = 7+j*80 + offset;
+						tile.anchor.x = 0.5;
+						tile.anchor.y = 0.5;
 						// paint tile black
 						//tile.tint = 0x000000;
 						// set it a bit transparent (it will look grey)
@@ -555,6 +715,10 @@
 
 				if(level.swapAnimating){
 					level.swapAnim();
+				}
+
+				if(level.removeAnimating){
+					level.removeMatchesAnim();
 				}
 
 				renderer.render(stage);
