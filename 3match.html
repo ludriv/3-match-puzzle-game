@@ -104,6 +104,17 @@
 			    	
 			    }
 
+			    this.setSwapDestWithSpeed = function(candy, speed){
+			    	
+			    	if(this.checkSwapping() && this.checkPosition()){
+			    		this.speedX = speed;
+			    		this.speedY = speed;
+			    		this.swapToX = candy.sprite.position.x;
+			   			this.swapToY = candy.sprite.position.y;
+			    	}
+			    	
+			    }
+
 			    this.moveToDest = function(){
 			    	if(!this.checkSwapping()){
 			    		if(this.swapToX - this.sprite.position.x > 0){
@@ -132,8 +143,8 @@
 			    			
 			    			//console.log(this.swapToX);
 			    		}
-			    		if(this.speedX<8)this.speedX ++;
-			    		if(this.speedY<8)this.speedY ++;
+			    		if(this.speedX<15)this.speedX ++;
+			    		if(this.speedY<15)this.speedY ++;
 			    	}
 			    }
 
@@ -184,6 +195,7 @@
 				this.tiles = new Array(h*w);
 				this.possibleSwaps = new Set();
 				this.fallingCols = new Array();
+				this.topUpCols = new Array();
 
 
 				//检测横向的match
@@ -413,6 +425,9 @@
 						}
 						//处理下落后产生的新的match
 						level.handleMatches();
+						
+						//level.handleTopUpAnim( level.topUpCandies() );
+
 						this.fallingCols = [];
 					}
 				}
@@ -490,7 +505,10 @@
 							candyType = newCandyType;
 
 							this.candies[col*h+row].type = candyType;
+							this.candies[col*h+row].sprite.type = candyType;
+							
 							arr.push(this.candies[col*h+row]);
+							
 
 						}
 
@@ -503,12 +521,57 @@
 
 				}
 
-				this.handleTopUpAnim = function(){
+				this.handleTopUpAnim = function(cols){
+					var longestDuration = 0;
+					for(arr in cols){
+						for(candy in cols[arr]){
+							var len = cols[arr].length;
+							console.log(cols[arr][candy]);
+							//cols[arr][candy]
+							cols[arr][candy].sprite.scale.x = 1;
+							cols[arr][candy].sprite.scale.y = 1;
+							cols[arr][candy].sprite.texture = PIXI.TextureCache[cols[arr][candy].type];
 
+							cols[arr][candy].setSwapDestWithSpeed(cols[arr][candy], 10);
+							cols[arr][candy].sprite.position.y = (len-candy)*-200+150;
+							cols[arr][candy].speedY = 15;
+
+							cols[arr][candy].delay = candy*2;
+							this.topUpCols.push(cols[arr][candy]);
+						}
+					}
 				}
 
 				this.topUpAnim = function(){
-					
+					var longestDuration = 0;
+					var cols = this.topUpCols;
+					var counter = 0;
+					for(var i=0;i<this.topUpCols.length;i++){
+						var cur = this.topUpCols[i];
+
+						if(cur.delay == 0)this.topUpCols[i].moveToDest();
+						else cur.delay--;
+
+						if(this.topUpCols[i].checkSwapping()){
+							counter++;
+						}
+					}
+					console.log("counter:"+counter);
+					//animation done
+					if(counter == this.topUpCols.length){
+						for(var i=0;i<this.topUpCols.length;i++){
+							var cur = this.topUpCols[i];
+
+							//cur.setPosition(cur.fallingToCandy);
+							cur.restorePosition();
+							//cur.sprite.scale.x = 0;
+							//cur.sprite.scale.y = 0;
+							
+						}
+						//处理下落后产生的新的match
+						level.handleMatches();
+						this.topUpCols = [];
+					}
 				}
 
 				this.printCandies = function(){
@@ -556,6 +619,7 @@
 						this.removeChains = null;
 						//temp added
 						this.handleFallingCandiesAnim(this.fillHoles());
+
 					}
 				}
 
@@ -824,39 +888,7 @@
 											switch_anim = false;
 											//check_tiles_all()
 										},500);
-										//console.log(chosenTiles);
-										//firstTile.position.x += 10
-										//firstTile.tint = 0x000000;
-								 		//secondTile.tint = 0x000000;
-										//canPick=true;
-										// did we pick the same tiles?
-										/*
-										if(firstTile.theVal==secondTile.theVal){
-											// wait a second then remove the tiles and make the player able to pick again
-											setTimeout(function(){
-												gameContainer.removeChild(firstTile);
-												gameContainer.removeChild(secondTile);
-												firstTile=null;
-												secondTile=null;
-												canPick=true;
-											},1000);
-										}
-										// we picked different tiles
-										else{
-											// wait a second then cover the tiles and make the player able to pick again
-								 			setTimeout(function(){
-								 				firstTile.isSelected=false
-								 				secondTile.isSelected=false
-								 				//firstTile.tint = 0x000000;
-								 				//secondTile.tint = 0x000000;
-								 				firstTile.alpha=0.5;
-								 				secondTile.alpha=0.5;
-								 				firstTile=null;
-												secondTile=null;
-												canPick=true	
-								 			},1000);
-								 		
-										}*/
+										
 									}	
 								}
 							}
@@ -880,6 +912,15 @@
 
 				if(level.fallingCols.length != 0){
 					level.fallingCandiesAnim();
+				}
+
+				if(level.topUpCols.length != 0){
+					level.topUpAnim();
+				}
+
+				if(!level.swapAnimating && !level.removeAnimating && level.fallingCols.length == 0 && level.topUpCols.length == 0){
+					//console.log("time to check");
+					level.handleTopUpAnim( level.topUpCandies() );
 				}
 
 				renderer.render(stage);
