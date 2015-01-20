@@ -13,8 +13,8 @@
 	<body>
 		<script>
 			//矩阵大小
-			var w = 3;
-			var h = 3;
+			var w = 5;
+			var h = 5;
 			var pic_space = 80;
 			var pic_width = 7;
 			var offset = 35;
@@ -69,7 +69,7 @@
 			    	else return false;
 
 			    }
-
+			    //test
 			    this.checkScale = function(){
 			    	if(this.sprite.scale.x > 0 && this.sprite.scale.y > 0)return true;
 			    	else return false;
@@ -85,6 +85,11 @@
 			    this.restorePosition = function(){
 			    	this.sprite.position.x = this.col*pic_space+pic_width+offset;
 			    	this.sprite.position.y = this.row*pic_space+pic_width+offset;
+			    }
+
+			    this.setPosition = function(candy){
+			    	this.sprite.position.x = candy.col*pic_space+pic_width+offset;
+			    	this.sprite.position.y = candy.row*pic_space+pic_width+offset;
 			    }
 
 			    this.setSwapDest = function(candy){
@@ -177,6 +182,8 @@
 				this.candies = new Array(h*w);
 				this.tiles = new Array(h*w);
 				this.possibleSwaps = new Set();
+				this.fallingCols = new Array();
+
 
 				//检测横向的match
 				this.detectHorizontalMatches = function(){
@@ -373,6 +380,107 @@
 					}
 	
 				}
+				
+				this.fallingCandiesAnim = function(){
+					var longestDuration = 0;
+					var cols = this.fallingCols;
+					var counter = 0;
+					for(var i=0;i<this.fallingCols.length;i++){
+						var cur = this.fallingCols[i];
+
+						if(cur.delay == 0)this.fallingCols[i].moveToDest();
+						else cur.delay--;
+
+						if(this.fallingCols[i].checkSwapping()){
+							counter++;
+						}
+					}
+					console.log(counter);
+					//animation done
+					if(counter == this.fallingCols.length){
+						for(var i=0;i<this.fallingCols.length;i++){
+							var cur = this.fallingCols[i];
+
+							cur.setPosition(cur.fallingToCandy);
+							cur.restorePosition();
+							cur.sprite.scale.x = 0;
+							cur.sprite.scale.y = 0;
+							
+							cur.fallingToCandy.sprite.texture = PIXI.TextureCache[cur.fallingToCandy.type];
+							cur.fallingToCandy.sprite.scale.x = 1;
+							cur.fallingToCandy.sprite.scale.y = 1;
+						}
+
+						this.fallingCols = [];
+					}
+				}
+
+				this.handleFallingCandiesAnim = function(cols){
+					var longestDuration = 0;
+					for(arr in cols){
+						for(candy in cols[arr]){
+							console.log(cols[arr][candy]);
+							//cols[arr][candy]
+							cols[arr][candy].delay = 1+candy*4;
+							this.fallingCols.push(cols[arr][candy]);
+						}
+					}
+
+				}
+
+
+				this.fillHoles = function(){
+					var cols = new Array();
+
+					for(var col=w-1;col>=0;col--){
+						var arr = new Array();
+						for(var row=h-1;row>=0;row--){
+							
+							if(this.candies[col*h+row].type == -1){
+
+								for(var lookup = row-1; lookup>=0; lookup--){
+									var candyType = this.candies[col*h+lookup].type;
+									if(candyType != -1){
+										console.log(candyType);
+										this.candies[col*h+lookup].type = -1;
+										this.candies[col*h+lookup].sprite.type = -1;
+										this.candies[col*h+row].type = candyType;
+										this.candies[col*h+row].sprite.type = candyType;
+
+										this.candies[col*h+lookup].setSwapDest(this.candies[col*h+row]);
+
+										this.candies[col*h+lookup].fallingToCandy = this.candies[col*h+row];
+										arr.push(this.candies[col*h+lookup]);
+										this.printCandies();
+										break;
+									}
+
+
+								}
+
+							}
+
+						}
+						if(arr.length != 0 ){
+							cols.push(arr);
+						}
+					}
+				
+					return cols;
+				}
+
+				this.printCandies = function(){
+					for(var row=0;row<h;row++){
+						var buf = "";
+						
+						for(var col=0;col<w;col++){
+					
+							buf += this.candies[col*h+row].type;
+							buf += " "
+						}
+						console.log(buf);
+					}
+				}
 
 
 				this.removeMatchesAnim = function(){
@@ -401,8 +509,11 @@
 					});
 					console.log(total_chains_num);
 					if(total_chains_num == 0){
+
 						this.removeAnimating = false;
 						this.removeChains = null;
+						//temp added
+						this.handleFallingCandiesAnim(this.fillHoles());
 					}
 				}
 
@@ -413,7 +524,8 @@
 					
 					this.removeChains = chains;
 					this.removeAnimating = true;
-					//this.removeCandies(chains);
+					//remove matches in the candies array (only change the tpye currently)
+					this.removeCandies(chains);
 				}
 
 
@@ -426,7 +538,8 @@
 							console.log(chain.candies[i]);
 							var cur = chain.candies[i];
 							//maybe wrong here??
-							this.candies[cur.col*h+cur.row] = null;
+							level.candies[cur.col*h+cur.row].type = -1;
+							level.candies[cur.col*h+cur.row].sprite.type = -1;
 						}
 
 					});
@@ -642,6 +755,8 @@
 				      				this.tint = 0xffffff;
 				      				//this.blendMode = PIXI.blendModes.ADD
 									this.alpha = 1;
+
+									console.log(level.tileAtCandy(this));
 									// is it the first tile we uncover?
 									if(firstTile==null){
 										firstTile=this
@@ -719,6 +834,10 @@
 
 				if(level.removeAnimating){
 					level.removeMatchesAnim();
+				}
+
+				if(level.fallingCols.length != 0){
+					level.fallingCandiesAnim();
 				}
 
 				renderer.render(stage);
