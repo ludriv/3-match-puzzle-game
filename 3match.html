@@ -18,6 +18,7 @@
 			var pic_space = 80;
 			var pic_width = 7;
 			var offset = 35;
+			var candyTypeNum = 4;
 
 			var love_array = [
 
@@ -50,7 +51,7 @@
 			    this.swapToY = null;
 			   
 			    this.random = function(){
-			    	return Math.floor(Math.random()*4);
+			    	return Math.floor(Math.random()*candyTypeNum);
 			    }
 
 			    this.bzeroSwapXY = function(){
@@ -410,7 +411,8 @@
 							cur.fallingToCandy.sprite.scale.x = 1;
 							cur.fallingToCandy.sprite.scale.y = 1;
 						}
-
+						//处理下落后产生的新的match
+						level.handleMatches();
 						this.fallingCols = [];
 					}
 				}
@@ -467,6 +469,46 @@
 					}
 				
 					return cols;
+				}
+
+
+				this.topUpCandies = function(){
+					var cols = new Array();
+					var candyType;
+
+					for(var col=0;col<w;col++){
+						var arr = new Array();
+						for(var row=0;row<h && this.candies[col*h+row].type == -1;row++){
+							//add tile grid here, currently not added
+							/*
+							condition for tile grid
+							*/
+							var newCandyType;
+							do{
+								newCandyType = Math.floor(Math.random()*candyTypeNum);
+							}while(newCandyType == candyType)
+							candyType = newCandyType;
+
+							this.candies[col*h+row].type = candyType;
+							arr.push(this.candies[col*h+row]);
+
+						}
+
+						if(arr.length != 0){
+							cols.push(arr);
+						}
+					}
+
+					return cols;
+
+				}
+
+				this.handleTopUpAnim = function(){
+
+				}
+
+				this.topUpAnim = function(){
+					
 				}
 
 				this.printCandies = function(){
@@ -629,7 +671,7 @@
 							//确保初始化时候没有连起来的candy
 							
 							do{
-								type = Math.floor(Math.random()*4);
+								type = Math.floor(Math.random()*candyTypeNum);
 							}while((col >= 2 && this.candies[(col-1)*h+row].type == type && this.candies[(col-2)*h+row].type == type) || (row >= 2 && this.candies[col*h+row-1].type == type && this.candies[col*h+row-2].type == type) )
 							
 
@@ -698,7 +740,7 @@
 				
 				while(chosenTiles.length<h*w){
 
-					var candidate=Math.floor(Math.random()*4);
+					var candidate=Math.floor(Math.random()*candyTypeNum);
 
 					chosenTiles.push(candidate)
 
