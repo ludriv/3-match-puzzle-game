@@ -8,7 +8,9 @@
 				padding: 0;
 			}
 		</style>
-		<script src="../../bin/pixi.dev.js"></script>
+		<script src="bin/pixi.dev.js"></script>
+		<script src="bin/howler.js"></script>
+
 	</head>
 	<body>
 		<script>
@@ -19,6 +21,8 @@
 			var pic_width = 7;
 			var offset = 35;
 			var candyTypeNum = 4;
+			var selectedTile = null;
+			var selected_count = 0;
 
 			var love_array = [
 
@@ -49,7 +53,8 @@
 			    this.type = type;
 			    this.swapToX = null;
 			    this.swapToY = null;
-			   
+			   	this.selected = false;
+
 			    this.random = function(){
 			    	return Math.floor(Math.random()*candyTypeNum);
 			    }
@@ -138,7 +143,7 @@
 			    				this.bzeroSwapXY();
 			    		}
 			    		else{
-
+			    			this.restorePosition();
 			    			this.bzeroSwapXY();
 			    			
 			    			//console.log(this.swapToX);
@@ -614,7 +619,7 @@
 					});
 					console.log(total_chains_num);
 					if(total_chains_num == 0){
-
+						
 						this.removeAnimating = false;
 						this.removeChains = null;
 						//temp added
@@ -630,6 +635,7 @@
 					
 					this.removeChains = chains;
 					this.removeAnimating = true;
+					
 					//remove matches in the candies array (only change the tpye currently)
 					this.removeCandies(chains);
 				}
@@ -637,7 +643,7 @@
 
 
 				this.removeCandies = function(chains){
-
+					
 					chains.forEach(function(chain) {
 						
 						for(var i=0;i<chain.candies.length;i++){
@@ -675,6 +681,9 @@
 					this.detectPossibleSwaps();
 					if(this.possibleSwapsHas(this.swap)){
 						//交换candies的动画开始
+						var sound = new Howl({
+						  urls: ['Sounds/Chomp.wav']
+						}).play();
 						this.swapAnimating = true;
 					}
 					
@@ -771,7 +780,7 @@
 			// create a renderer instance width=640 height=480
 			var renderer = PIXI.autoDetectRenderer(80*w,80*h);
 			// importing a texture atlas created with texturepacker
-			var tileAtlas = ["images.json"];
+			var tileAtlas = ["candies.json"];
 			// create a new loader
 			var loader = new PIXI.AssetLoader(tileAtlas);
 			// create an empty container
@@ -846,7 +855,7 @@
 						// paint tile black
 						//tile.tint = 0x000000;
 						// set it a bit transparent (it will look grey)
-						tile.alpha=0.5;
+						tile.alpha=1;
 						// add the tile
 						level.candies[i*h+j].sprite = tile;
 						// mouse-touch listener
@@ -861,6 +870,14 @@
 				      				this.tint = 0xffffff;
 				      				//this.blendMode = PIXI.blendModes.ADD
 									this.alpha = 1;
+									
+									if(selectedTile!=null){
+										selectedTile.scale.x = 1;
+										selectedTile.scale.y = 1;
+									}
+									selectedTile = this;
+									
+									selected_count = 0;
 
 									console.log(level.tileAtCandy(this));
 									// is it the first tile we uncover?
@@ -873,14 +890,16 @@
 										// can't pick anymore
 										canPick=false;
 										//switch_pos(firstTile, secondTile);
+										
+										selectedTile = null;
 
 										if(level.checkIfNeighbourTile(firstTile, secondTile))
 										level.swapTiles(firstTile, secondTile);
 
 										setTimeout(function(){
 											canPick=true;
-											firstTile.alpha=0.5;
-								 			secondTile.alpha=0.5;
+											firstTile.alpha=1;
+								 			secondTile.alpha=1;
 								 			firstTile.isSelected=false;
 								 			secondTile.isSelected=false;
 								 			firstTile=null;
@@ -923,6 +942,11 @@
 					level.handleTopUpAnim( level.topUpCandies() );
 				}
 
+				if(selectedTile != null){
+					selected_count += 0.1;
+					selectedTile.scale.x = 1.1 + Math.sin(selected_count) * 0.04;
+					selectedTile.scale.y = 1.1 + Math.cos(selected_count) * 0.04;
+				}
 				renderer.render(stage);
 			}
 
