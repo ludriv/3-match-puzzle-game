@@ -53,6 +53,8 @@
 			    this.type = type;
 			    this.swapToX = null;
 			    this.swapToY = null;
+
+			    //for first selected tile animation
 			   	this.selected = false;
 
 			    this.random = function(){
@@ -83,8 +85,8 @@
 
 			    this.scaleDown = function(){
 			    	if(this.checkScale()){
-			    		this.sprite.scale.x -= 0.1;
-			    		this.sprite.scale.y -= 0.1;
+			    		this.sprite.scale.x -= 0.15;
+			    		this.sprite.scale.y -= 0.15;
 			    	}
 			    }
 
@@ -122,34 +124,48 @@
 
 			    this.moveToDest = function(){
 			    	if(!this.checkSwapping()){
+			    		//console.log("swapping")
 			    		if(this.swapToX - this.sprite.position.x > 0){
 			    			this.sprite.position.x += this.speedX;
-			    			if(this.swapToX <= this.sprite.position.x)
-			    				this.bzeroSwapXY();
+			    			if(this.swapToX < this.sprite.position.x){
+			    				//this.bzeroSwapXY();
+			    				this.speedX = 1;
+			    				return;
+			    			}
 			    		}
 			    		else if(this.swapToX - this.sprite.position.x < 0){
 			    			this.sprite.position.x -= this.speedX;
-			    			if(this.swapToX >= this.sprite.position.x)
-			    				this.bzeroSwapXY();
+			    			if(this.swapToX > this.sprite.position.x){
+			    				//this.bzeroSwapXY();
+			    				this.speedX = 1;
+			    				return;
+			    				
+			    			}
 			    		}
 			    		else if(this.swapToY - this.sprite.position.y > 0){
 			    			this.sprite.position.y += this.speedY;
-			    			if(this.swapToY <= this.sprite.position.y)
-			    				this.bzeroSwapXY();
+			    			if(this.swapToY < this.sprite.position.y){
+			    				//this.bzeroSwapXY();
+			    				this.speedY = 1;
+			    				return;
+			    			}
 			    		}
 			    		else if(this.swapToY - this.sprite.position.y < 0){
 			    			this.sprite.position.y -= this.speedY;
-			    			if(this.swapToY >= this.sprite.position.y)
-			    				this.bzeroSwapXY();
+			    			if(this.swapToY > this.sprite.position.y){
+			    				//this.bzeroSwapXY();
+			    				this.speedY = 1;
+			    				return;
+			    			}
 			    		}
 			    		else{
-			    			this.restorePosition();
+			    			//this.restorePosition();
 			    			this.bzeroSwapXY();
 			    			
 			    			//console.log(this.swapToX);
 			    		}
-			    		if(this.speedX<15)this.speedX ++;
-			    		if(this.speedY<15)this.speedY ++;
+			    		if(this.speedX<25)this.speedX ++;
+			    		if(this.speedY<25)this.speedY ++;
 			    	}
 			    }
 
@@ -367,7 +383,7 @@
 				//交换位置的动画
 				this.swapAnim = function(){
 					
-					console.log("Swapping");
+					//console.log("Swapping");
 						
 					if(this.swap == null)return;
 
@@ -394,6 +410,10 @@
 						this.swap = null;
 
 						//handle matches after the swap animation is done
+						/*
+							maybe add one argument to add chain type
+
+						*/
 						this.handleMatches();
 					}
 	
@@ -429,7 +449,7 @@
 							cur.fallingToCandy.sprite.scale.y = 1;
 						}
 						//处理下落后产生的新的match
-						level.handleMatches();
+						//level.handleMatches();
 						
 						//level.handleTopUpAnim( level.topUpCandies() );
 
@@ -447,7 +467,7 @@
 							this.fallingCols.push(cols[arr][candy]);
 						}
 					}
-
+					
 				}
 
 
@@ -539,7 +559,7 @@
 
 							cols[arr][candy].setSwapDestWithSpeed(cols[arr][candy], 10);
 							cols[arr][candy].sprite.position.y = (len-candy)*-200+150;
-							cols[arr][candy].speedY = 15;
+							
 
 							cols[arr][candy].delay = candy*2;
 							this.topUpCols.push(cols[arr][candy]);
@@ -574,8 +594,9 @@
 							
 						}
 						//处理下落后产生的新的match
-						level.handleMatches();
 						this.topUpCols = [];
+						level.handleMatches();
+						
 					}
 				}
 
@@ -600,11 +621,17 @@
 					console.log(total_chains_num);
 					chains.forEach(function(chain) {
 						var count = 0;
+						
 						for(var i=0;i<chain.candies.length;i++){
 							
 							var cur = chain.candies[i];
 							var candy = level.candyAt(cur.col, cur.row);
-
+							//play match audio
+							if(i==0 && candy.sprite.scale.x == 1){
+								var sound = new Howl({
+									urls: ['Sounds/Ka-Ching.wav']
+								}).play();
+							}
 							//console.log("Shrinking");
 							candy.scaleDown();
 							if(candy.checkScale() == false){
@@ -619,7 +646,7 @@
 					});
 					console.log(total_chains_num);
 					if(total_chains_num == 0){
-						
+
 						this.removeAnimating = false;
 						this.removeChains = null;
 						//temp added
@@ -643,7 +670,7 @@
 
 
 				this.removeCandies = function(chains){
-					
+
 					chains.forEach(function(chain) {
 						
 						for(var i=0;i<chain.candies.length;i++){
