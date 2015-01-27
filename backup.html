@@ -15,8 +15,8 @@
 	<body>
 		<script>
 			//矩阵大小
-			var w = 10;
-			var h = 10;
+			var w = 5;
+			var h = 5;
 			var pic_space = 80;
 			var pic_width = 7;
 			var offset = 35;
@@ -36,21 +36,13 @@
 
 			var array_1 = [
 
-				0,1,2,1,2,
-				3,2,1,2,1,
-				1,2,1,0,1,
-				1,3,2,0,3,
-				3,1,3,1,2,
+				0,1,1,1,0,0,
+				0,0,1,0,0,0,
+				0,0,1,0,0,0,
+				0,0,1,0,0,0,
+				0,1,1,1,0,0
 			]
 
-			var array_2 = [
-
-				3,0,0,0,2,
-				0,2,2,3,1,
-				3,1,1,1,1,
-				1,2,3,2,3,
-				1,1,2,1,2,
-			]
 
 			function Candy(col,row,type) {
 			    
@@ -441,37 +433,25 @@
 							counter++;
 						}
 					}
-					//level.printCandies();
-					//console.log("");
+					console.log(counter);
 					//animation done
 					if(counter == this.fallingCols.length){
-						
-
 						for(var i=0;i<this.fallingCols.length;i++){
 							var cur = this.fallingCols[i];
 
 							//cur.setPosition(cur.fallingToCandy);
 							cur.restorePosition();
-							
-							cur.sprite.texture = PIXI.TextureCache[cur.type];
-							if(cur.fallingToCandy != undefined)cur.fallingToCandy = undefined;
-
-
-							//cur.sprite.type = cur.type;
-							
 							//cur.sprite.scale.x = 0;
 							//cur.sprite.scale.y = 0;
 							
-							//if(cur.fallingToCandy != undefined)cur.fallingToCandy.sprite.texture = PIXI.TextureCache[cur.fallingToCandy.type];
+							//cur.fallingToCandy.sprite.texture = PIXI.TextureCache[cur.fallingToCandy.type];
 							//cur.fallingToCandy.sprite.scale.x = 1;
 							//cur.fallingToCandy.sprite.scale.y = 1;
 						}
-
-						
 						//处理下落后产生的新的match
-						//level.handleMatches();
-						console.log("top up here...");
-						level.handleTopUpAnim( level.topUpCandies() );
+						level.handleMatches();
+						
+						//level.handleTopUpAnim( level.topUpCandies() );
 
 						this.fallingCols = [];
 					}
@@ -483,15 +463,11 @@
 						for(candy in cols[arr]){
 							console.log(cols[arr][candy]);
 							//cols[arr][candy]
-							var delay_para = 2;
-							cols[arr][candy].delay = 1+candy*delay_para;
+							cols[arr][candy].delay = 1+candy*4;
 							this.fallingCols.push(cols[arr][candy]);
 						}
 					}
-					//temp added for testing
-					if(this.fallingCols.length == 0){
-						level.handleTopUpAnim( level.topUpCandies() );
-					}
+					
 				}
 
 
@@ -506,12 +482,10 @@
 						for(var row=h-1;row>=0;row--){
 							
 							if(this.candies[col*h+row].type == -1){
-								
-								if(nullArr.indexOf(this.candies[col*h+row]) == -1 && this.candies[col*h+row].fallingToCandy == undefined)nullArr.push(this.candies[col*h+row]);
-								
+
 								for(var lookup = row-1; lookup>=0; lookup--){
 									var candyType = this.candies[col*h+lookup].type;
-								
+									if(nullArr.indexOf(this.candies[col*h+row]) == -1 && this.candies[col*h+row].fallingToCandy == undefined)nullArr.push(this.candies[col*h+row]);
 									if(candyType != -1){
 										console.log(candyType);
 										this.candies[col*h+lookup].type = -1;
@@ -538,7 +512,6 @@
 							if(nullArr.length != 0 ){
 								var len = arr.length;
 								var candyType;
-								var tmp = [];
 								for(c in nullArr){
 									nullArr[c].sprite.scale.x = 1;
 									nullArr[c].sprite.scale.y = 1;
@@ -554,30 +527,18 @@
 									candyType = newCandyType;
 									nullArr[c].newType = candyType;
 									
-									nullArr[c].sprite.texture = PIXI.TextureCache[nullArr[c].newType];
-									console.log("------------");
-									console.log(nullArr[c]);
-									//console.log("xxxx"+c+" "+nullArr[c].type);
-									//tmp.push(nullArr[c]);
-								}
-								var nlen = nullArr.length;
-								for(c in nullArr){
-									//console.log("test:");
-									//console.log(nullArr[c]);
-									this.candies[col*h+parseInt(c)].type = nullArr[nlen-c-1].newType;
-									this.candies[col*h+parseInt(c)].sprite.type = nullArr[nlen-c-1].newType;
-									arr.push(nullArr[c])
+									//console.log("xxxx"+arr[0].swapToY);
+									arr.push(nullArr[c]);
 								}
 								
 							}
-							console.log("xxxxx:");
-							console.log(arr);
+							console.log("xxxxx"+arr.length);
 							cols.push(arr);
 						}
 						
 					}
-					//console.log("=====================");
-					//console.log(nullCols);
+					console.log("=====================");
+					console.log(nullCols);
 				
 					return cols;
 				}
@@ -636,7 +597,6 @@
 							this.topUpCols.push(cols[arr][candy]);
 						}
 					}
-					if(cols.length == 0)level.handleMatches();
 				}
 
 				this.topUpAnim = function(){
@@ -716,13 +676,12 @@
 						if(count == chain.candies.length)total_chains_num--;
 
 					});
-					//console.log(total_chains_num);
+					console.log(total_chains_num);
 					if(total_chains_num == 0){
 
 						this.removeAnimating = false;
 						this.removeChains = null;
 						//temp added
-						console.log("fill hole here...");
 						this.handleFallingCandiesAnim(this.fillHoles());
 
 					}
@@ -847,8 +806,8 @@
 								type = Math.floor(Math.random()*candyTypeNum);
 							}while((col >= 2 && this.candies[(col-1)*h+row].type == type && this.candies[(col-2)*h+row].type == type) || (row >= 2 && this.candies[col*h+row-1].type == type && this.candies[col*h+row-2].type == type) )
 							
-							//for testing only using the pre defined array
-							//type = array_2[col+row*w];
+
+							//type = love_array[col+row*w];
 
 							var candy = new Candy(col, row, type);
 							this.candies[col*h+row] = candy;
