@@ -36,12 +36,12 @@ Removes a certain column.
 Progress
 --------
 Currently finished features:<br/>
-`Render sprites on the screen.<br/>`
-`User can swap tiles (Improve animation later).<br/>`
-`Generate tiles (will not connect more than 3 tiles on a row/col).<br/>`
-`Remove matched candies<br/>`
-`Added two sound effects<br/>`
-`Special candies in progress`
+*`Render sprites on the screen.`
+*`User can swap tiles (Improve animation later).`
+*`Generate tiles (will not connect more than 3 tiles on a row/col).`
+*`Remove matched candies.`
+*`Added two sound effects.`
+*`Special candies in progress.`
 
 
 Tutorial
