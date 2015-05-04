@@ -15,14 +15,15 @@
 	<body>
 		<script>
 			//矩阵大小
-			var w = 10;
-			var h = 10;
+			var w = 6;
+			var h = 6;
 			var pic_space = 80;
 			var pic_width = 7;
 			var offset = 35;
 			var candyTypeNum = 4;
 			var selectedTile = null;
 			var selected_count = 0;
+			var godMode = false;
 
 			var love_array = [
 
@@ -690,7 +691,7 @@
 					//console.log("hello");
 					var chains = this.removeChains;
 					var total_chains_num = chains.size;
-					console.log(total_chains_num);
+					//console.log(total_chains_num);
 					chains.forEach(function(chain) {
 						var count = 0;
 						
@@ -722,7 +723,7 @@
 						this.removeAnimating = false;
 						this.removeChains = null;
 						//temp added
-						console.log("fill hole here...");
+						//console.log("fill hole here...");
 						this.handleFallingCandiesAnim(this.fillHoles());
 
 					}
@@ -731,7 +732,7 @@
 				this.handleMatches = function(){
 					
 					var chains = this.removeMatches();
-					console.log(chains);
+					//console.log(chains);
 					
 					this.removeChains = chains;
 					this.removeAnimating = true;
@@ -978,11 +979,24 @@
 									selectedTile = this;
 									
 									selected_count = 0;
-
+									
 									console.log(level.tileAtCandy(this));
 									// is it the first tile we uncover?
 									if(firstTile==null){
-										firstTile=this
+										firstTile=this;
+										if(godMode == true){
+											//canPick=false;
+											firstTile.isSelected = false;
+											selectedTile = null;
+											level.candies[firstTile.i*h+firstTile.j-1].type = -1;
+											level.candies[firstTile.i*h+firstTile.j].type = -1;
+											level.candies[firstTile.i*h+firstTile.j+1].type = -1;
+											
+											firstTile = null;
+											level.handleMatches();
+											switch_anim = false;
+											return;
+										}
 									}
 									// this is the second tile
 									else{
@@ -996,17 +1010,8 @@
 										if(level.checkIfNeighbourTile(firstTile, secondTile))
 										level.swapTiles(firstTile, secondTile);
 
-										setTimeout(function(){
-											canPick=true;
-											firstTile.alpha=1;
-								 			secondTile.alpha=1;
-								 			firstTile.isSelected=false;
-								 			secondTile.isSelected=false;
-								 			firstTile=null;
-											secondTile=null;
-											switch_anim = false;
-											//check_tiles_all()
-										},500);
+										resetForCandy();
+										
 										
 									}	
 								}
@@ -1017,6 +1022,21 @@
 				addTileToContainer(level); 
 				requestAnimFrame(animate);
 			}
+
+			var resetForCandy = function(){
+				setTimeout(function(){
+					canPick=true;
+					firstTile.alpha=1;
+					secondTile.alpha=1;
+					firstTile.isSelected=false;
+					secondTile.isSelected=false;
+					firstTile=null;
+					secondTile=null;
+					switch_anim = false;
+					//check_tiles_all()
+				},500);
+			}
+
 			function animate() {
 
 				requestAnimFrame(animate);
