@@ -856,6 +856,33 @@
 						}
 					}
 				}
+
+				this.removeColumn = function(col){
+					for(var k=0;k<w;k++){
+						this.candies[col*h+k].type = -1;
+					}
+					this.handleMatches();
+				}
+
+				this.removeRow = function(row){
+					for(var k=0;k<w;k++){
+						this.candies[k*h+row].type = -1;
+					}
+					this.handleMatches();
+				}
+
+				this.removeSpecificCandy = function(color){
+					for(var i=0;i<w;i++){
+						for(var j=0;j<h;j++){
+							this.candies[i*h+j].type = (color === this.candies[i*h+j].type) ? -1 : this.candies[i*h+j].type;
+						}
+					}
+					this.handleMatches();
+				}
+
+				this.removeSurroundCandies = function(candy){
+
+				}
 			}
 
 
@@ -988,10 +1015,14 @@
 											//canPick=false;
 											firstTile.isSelected = false;
 											selectedTile = null;
+											/*
 											level.candies[firstTile.i*h+firstTile.j-1].type = -1;
 											level.candies[firstTile.i*h+firstTile.j].type = -1;
 											level.candies[firstTile.i*h+firstTile.j+1].type = -1;
-											
+											*/
+											for(var k=0;k<w;k++){
+												level.candies[firstTile.i*h+k].type = -1;
+											}
 											firstTile = null;
 											level.handleMatches();
 											switch_anim = false;
