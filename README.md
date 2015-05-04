@@ -1,4 +1,5 @@
 <h1>Candy Crush Duplicate</h1>
+I am trying to create a 3-match game like Candy Crush, currently the basic functions are done.
 
 Demo GIF
 --------
@@ -13,8 +14,6 @@ $ python -m SimpleHTTPServer 8000
 ```
 
 Then go to latest <b>Chrome</b> browser and open <a>http://localhost:8000/3match.html</a>
-
-Try to create a 3-match game like Candy Crush.
 
 Functions
 ---------
@@ -37,11 +36,12 @@ Removes a certain column.
 Progress
 --------
 Currently finished features:<br/>
-Render sprites on the screen.<br/>
-User can swap tiles (Improve animation later).<br/>
-Generate tiles (will not connect more than 3 tiles on a row/col).<br/>
-Remove matched candies<br/>
-Added two sound effects<br/>
+`Render sprites on the screen.<br/>`
+`User can swap tiles (Improve animation later).<br/>`
+`Generate tiles (will not connect more than 3 tiles on a row/col).<br/>`
+`Remove matched candies<br/>`
+`Added two sound effects<br/>`
+`Special candies in progress`
 
 
 Tutorial
