@@ -881,7 +881,13 @@
 				}
 
 				this.removeSurroundCandies = function(candy){
-
+					
+					for(var i=candy.col-1;i<=candy.col+1 && i<w;i++){
+						for(var j=candy.row-1;j<=candy.row+1 && j<h;j++){
+							this.candies[i*h+j].type = -1;
+						}
+					}
+					this.handleMatches();
 				}
 			}
 

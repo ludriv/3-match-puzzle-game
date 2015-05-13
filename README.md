@@ -21,17 +21,23 @@ You can use the develop tool by Chrome to call the following functions
 ```javascript
 level.removeSpecificCandy(color)
 ```
-Removes all the candies with certain color.
+Removes all the candies with certain color(num).
 
 ```javascript
 level.removeRow(row)
 ```
-Removes a certain row.
+Removes a certain row(num).
 
 ```javascript
 level.removeColumn(column)
 ```
-Removes a certain column.
+Removes a certain column(num).
+
+```javascript
+var candy = level.candies[x];
+level.removeSurroundCandies(candy);
+```
+Removes a 3x3 candies around input candy.
 
 Progress
 --------
