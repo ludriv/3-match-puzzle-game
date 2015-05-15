@@ -10,7 +10,7 @@
 		</style>
 		<script src="bin/pixi.dev.js"></script>
 		<script src="bin/howler.js"></script>
-
+		<script src="bin/underscore.min.js"></script>
 	</head>
 	<body>
 		<script>
@@ -20,7 +20,8 @@
 			var pic_space = 80;
 			var pic_width = 7;
 			var offset = 35;
-			var candyTypeNum = 4;
+			var candyTypeNum = 5;
+			var totalDiffCandyType = 5;
 			var selectedTile = null;
 			var selected_count = 0;
 			var godMode = false;
@@ -63,6 +64,8 @@
 			    this.swapToX = null;
 			    this.swapToY = null;
 			    this.newType = -1;
+			    //init candy as a regular candy
+			    this.specialType = 0;
 			    //for first selected tile animation
 			   	this.selected = false;
 
@@ -701,9 +704,10 @@
 							var candy = level.candyAt(cur.col, cur.row);
 							//play match audio
 							if(i==0 && candy.sprite.scale.x == 1){
+								/*
 								var sound = new Howl({
 									urls: ['Sounds/Ka-Ching.wav']
-								}).play();
+								}).play();*/
 							}
 							//console.log("Shrinking");
 							candy.scaleDown();
@@ -729,11 +733,50 @@
 					}
 				}
 
+				this.handleSpecialInChains = function(chains){
+					chains.forEach(function(chain) {
+						
+						for(var i=0;i<chain.candies.length;i++){
+							console.log(chain.candies[i]);
+							var cur = chain.candies[i];
+							if(chain.candies.length === 4 && !!firstTile && !!secondTile){
+								if(firstTile.i === chain.candies[i].col &&
+								 firstTile.j === chain.candies[i].row &&
+								 firstTile.type === chain.candies[i].type){
+								 	chain.candies[i].specialType = 1;
+								 	var tmpSpecialType = chain.candies[i].type + totalDiffCandyType;
+								 	chain.candies[i].sprite.texture = PIXI.TextureCache[tmpSpecialType];
+									chain.candies.splice(i, 1);
+								}
+								if(secondTile.i === chain.candies[i].col &&
+								 secondTile.j === chain.candies[i].row &&
+								 secondTile.type === chain.candies[i].type){
+								 	chain.candies[i].specialType = 1;
+								 	var tmpSpecialType = chain.candies[i].type + totalDiffCandyType;
+								 	chain.candies[i].sprite.texture = PIXI.TextureCache[tmpSpecialType];
+									chain.candies.splice(i, 1);
+								}
+							}else if(chain.candies.length === 4){
+								//for naturally formed 4 candies in a row or col
+								chain.candies.splice(2, 1);
+								chain.candies[2].specialType = 1;
+								var tmpSpecialType = chain.candies[2].type + totalDiffCandyType;
+								chain.candies[2].sprite.texture = PIXI.TextureCache[tmpSpecialType];
+								break;
+							}
+							
+							
+						}
+
+					});
+				}
+
 				this.handleMatches = function(){
 					
 					var chains = this.removeMatches();
 					//console.log(chains);
-					
+					this.handleSpecialInChains(chains);
+
 					this.removeChains = chains;
 					this.removeAnimating = true;
 					
@@ -782,9 +825,9 @@
 					this.detectPossibleSwaps();
 					if(this.possibleSwapsHas(this.swap)){
 						//交换candies的动画开始
-						var sound = new Howl({
+						/*var sound = new Howl({
 						  urls: ['Sounds/Chomp.wav']
-						}).play();
+						}).play();*/
 						this.swapAnimating = true;
 					}
 					
