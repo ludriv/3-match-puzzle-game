@@ -15,12 +15,13 @@
 	<body>
 		<script>
 			//矩阵大小
-			var w = 6;
-			var h = 6;
+			//T shape 下落
+			var w = 5;
+			var h = 5;
 			var pic_space = 80;
 			var pic_width = 7;
 			var offset = 35;
-			var candyTypeNum = 4;
+			var candyTypeNum = 3;
 			var totalDiffCandyType = 5;
 			var selectedTile = null;
 			var selected_count = 0;
@@ -36,6 +37,17 @@
 				0,0,0,0,1,0,0,0
 			]
 
+/*
+			var love_array = [
+
+				0,0,4,4,0,4,4,0,
+				0,4,4,4,4,4,4,4,
+				0,4,4,4,4,4,4,4,
+				0,0,4,4,4,4,4,0,
+				0,0,0,4,4,4,0,0,
+				0,0,0,0,4,0,0,0
+			]
+*/
 			var array_1 = [
 
 				0,1,2,1,2,
@@ -45,13 +57,33 @@
 				3,1,3,1,2,
 			]
 
-			var array_2 = [
+			var array_test = [
 
-				3,0,0,0,2,
+				3,6,7,0,2,
 				0,2,2,3,1,
-				3,1,1,1,1,
+				3,1,3,1,1,
 				1,2,3,2,3,
 				1,1,2,1,2,
+			]
+/*
+			var array_3 = [
+
+				3,0,1,0,2,0,
+				0,2,2,3,1,1,
+				3,1,0,1,3,2,
+				1,3,0,0,3,2,
+				2,10,1,2,3,3,
+				1,2,5,1,3,1,
+			]
+*/
+			var array_3 = [
+
+				1,2,2,1,1,2,
+				0,1,0,0,2,0,
+				2,0,2,1,0,2,
+				0,0,1,0,1,0,
+				2,2,0,1,0,2,
+				0,2,2,0,0,2,
 			]
 
 			function Candy(col,row,type) {
@@ -68,6 +100,7 @@
 			    this.specialType = 0;
 			    //for first selected tile animation
 			   	this.selected = false;
+			   	this.animCtrl = 0;
 
 			    this.random = function(){
 			    	return Math.floor(Math.random()*candyTypeNum);
@@ -223,12 +256,15 @@
 				this.swap = null;
 				this.swapAnimating = false;
 				this.removeAnimating = false;
+				this.specialCandyAppearAnimating = false;
+				this.specialCandyArr = new Array();
 				this.removeChains = null;
 				this.candies = new Array(h*w);
 				this.tiles = new Array(h*w);
 				this.possibleSwaps = new Set();
 				this.fallingCols = new Array();
 				this.topUpCols = new Array();
+				this.swapOnly = false;
 
 				this.setCandyTexture = function(candy, type){
 					candy.sprite.texture = PIXI.TextureCache[type];	
@@ -695,6 +731,30 @@
 				}
 
 
+				this.specialCandyAppearAnim = function(){
+					//console.log(this.specialCandyArr);
+					for(var i=0;i<this.specialCandyArr.length;i++){
+						var curCandy = this.specialCandyArr[i];
+						if(curCandy.sprite.scale.x > 1.3 && curCandy.sprite.scale.y > 1.3 && curCandy.animCtrl === 0){
+							console.log("test");
+							curCandy.animCtrl = 1;
+						}
+						else if(curCandy.sprite.scale.x <= 1.3 && curCandy.sprite.scale.y <= 1.3 && curCandy.animCtrl === 0){
+							curCandy.sprite.scale.x += 0.1;
+			    			curCandy.sprite.scale.y += 0.1;
+						}else if(curCandy.sprite.scale.x >= 0.9 && curCandy.sprite.scale.y >= 0.9 && curCandy.animCtrl === 1){
+							curCandy.sprite.scale.x -= 0.1;
+			    			curCandy.sprite.scale.y -= 0.1;
+							
+						}else{
+							curCandy.animCtrl = 0;
+							curCandy.sprite.scale.x = 1;
+			    			curCandy.sprite.scale.y = 1;
+							this.specialCandyArr.splice(i,1);
+						}
+					}
+				}
+
 				this.removeMatchesAnim = function(){
 					//console.log("hello");
 					var chains = this.removeChains;
@@ -740,23 +800,31 @@
 
 				this.handleSpecialInChains = function(chains){
 					var myLevel = this;
-
+					var checkMatrix = _.range(w).map(function(n) { return _.range(h).map(function(n) { return null; }); });
 					chains.forEach(function(chain) {
 						
 						for(var i=0;i<chain.candies.length;i++){
+							if(checkMatrix[chain.candies[i].col][chain.candies[i].row] === null){
+								checkMatrix[chain.candies[i].col][chain.candies[i].row] = 1;
+							}
+							else{
+								chain.candies.splice(i, 1);
+								continue;
+							}
 							console.log(chain.candies[i]);
 							var cur = chain.candies[i];
-							if(chain.candies.length === 4 && !!firstTile && !!secondTile){
+							if(chain.candies.length === 4 && !!firstTile && !!secondTile && myLevel.swapOnly){
 								if(firstTile.i === chain.candies[i].col &&
 								 firstTile.j === chain.candies[i].row &&
 								 firstTile.type%totalDiffCandyType === chain.candies[i].type%totalDiffCandyType){
 
 								 	chain.candies[i].specialType = _.uniq(_.pluck(chain.candies, "row")).length === 1 ? 1 : 2;
 
-								 	var tmpSpecialType = chain.candies[i].type + totalDiffCandyType * chain.candies[i].specialType;
+								 	var tmpSpecialType = Math.floor(chain.candies[i].type%totalDiffCandyType) + totalDiffCandyType * chain.candies[i].specialType;
 								 	chain.candies[i].type = tmpSpecialType;
 								 	chain.candies[i].sprite.type = tmpSpecialType;
 								 	myLevel.setCandyTexture(chain.candies[i], tmpSpecialType);
+								 	myLevel.specialCandyArr.push(chain.candies[i]);
 								 	//chain.candies[i].sprite.texture = PIXI.TextureCache[tmpSpecialType];
 									chain.candies.splice(i, 1);
 
@@ -766,23 +834,25 @@
 								 secondTile.type%totalDiffCandyType === chain.candies[i].type%totalDiffCandyType){
 
 								 	chain.candies[i].specialType = _.uniq(_.pluck(chain.candies, "row")).length === 1 ? 1 : 2;
-								 	var tmpSpecialType = chain.candies[i].type + totalDiffCandyType * chain.candies[i].specialType;
+								 	var tmpSpecialType = Math.floor(chain.candies[i].type%totalDiffCandyType) + totalDiffCandyType * chain.candies[i].specialType;
 								 	chain.candies[i].type = tmpSpecialType;
 								 	chain.candies[i].sprite.type = tmpSpecialType;
 								 	myLevel.setCandyTexture(chain.candies[i], tmpSpecialType);
+								 	myLevel.specialCandyArr.push(chain.candies[i]);
 								 	//chain.candies[i].sprite.texture = PIXI.TextureCache[tmpSpecialType];
 									chain.candies.splice(i, 1);
 
 								}
-							}else if(chain.candies.length === 4){
+							}else if(chain.candies.length === 4 && ((!firstTile && !secondTile) || !myLevel.swapOnly)){
 
 								//for naturally formed 4 candies in a row or col
 								var index = 2;
 								chain.candies[index].specialType = _.uniq(_.pluck(chain.candies, "row")).length === 1 ? 1 : 2;
-								var tmpSpecialType = chain.candies[index].type + totalDiffCandyType;
+								var tmpSpecialType = Math.floor(chain.candies[index].type%totalDiffCandyType) + totalDiffCandyType;
 								chain.candies[index].type = tmpSpecialType;
 								chain.candies[index].sprite.type = tmpSpecialType;
 								myLevel.setCandyTexture(chain.candies[index], tmpSpecialType);
+								myLevel.specialCandyArr.push(chain.candies[index]);
 								chain.candies.splice(index, 1);
 								//chain.candies[index].sprite.texture = PIXI.TextureCache[tmpSpecialType];
 								break;
@@ -801,25 +871,29 @@
 					//console.log(chains);
 					var myLevel = this;
 					var extraChains = [];
+					this.handleSpecialInChains(chains);
 					chains.forEach(function(chain) {
 						var targets = _.filter(chain.candies,function(v){
-						  return Math.floor(v.type / 5) === 1;
+						  return Math.floor(v.type / totalDiffCandyType) === 1;
 						});
 						for(var i=0;i<targets.length;i++){
+
 							var tmpChain = new Chain(1);
 							var arr = _.where(myLevel.candies, {col:targets[i].col});
 							for(var j=0; j<arr.length; j++){
+								if(myLevel.specialCandyArr.indexOf(arr[j]) > -1)continue;
 								tmpChain.addCandy(arr[j]);
 							}
 							extraChains.push( tmpChain );
 						}
 						targets = _.filter(chain.candies,function(v){
-						  return Math.floor(v.type / 5) === 2;
+						  return Math.floor(v.type / totalDiffCandyType) === 2;
 						});
 						for(var i=0;i<targets.length;i++){
 							var tmpChain = new Chain(2);
 							var arr = _.where(myLevel.candies, {row:targets[i].row});
 							for(var j=0; j<arr.length; j++){
+								if(myLevel.specialCandyArr.indexOf(arr[j]) > -1)continue;
 								tmpChain.addCandy(arr[j]);
 							}
 							extraChains.push( tmpChain );
@@ -828,7 +902,7 @@
 					extraChains.forEach(function(chain) {
 						chains.add(chain);
 					});
-					this.handleSpecialInChains(chains);
+					//this.handleSpecialInChains(chains);
 
 					this.removeChains = chains;
 					this.removeAnimating = true;
@@ -885,6 +959,14 @@
 					}
 					
 					//
+				}
+
+				this.forceSwapTiles = function(firstTile, secondTile){
+
+					firstCandy = this.tileAtCandy(firstTile);
+					secondCandy = this.tileAtCandy(secondTile);
+					this.swap = new Swap(firstCandy, secondCandy);
+					this.swapAnimating = true;
 				}
 
 				//交换candy的接口
@@ -951,7 +1033,7 @@
 							(row >= 2 && this.candies[col*h+row-1].type%totalDiffCandyType == type%totalDiffCandyType && this.candies[col*h+row-2].type%totalDiffCandyType == type%totalDiffCandyType) )
 							
 							//for testing only using the pre defined array
-							//type = array_2[col+row*w];
+							type = array_test[col+row*w];
 
 							var candy = new Candy(col, row, type);
 							this.candies[col*h+row] = candy;
@@ -967,6 +1049,16 @@
 				}
 
 				this.removeRow = function(row){
+					for(var k=0;k<w;k++){
+						this.candies[k*h+row].type = -1;
+					}
+					this.handleMatches();
+				}
+
+				this.removeCross = function(col, row){
+					for(var k=0;k<w;k++){
+						this.candies[col*h+k].type = -1;
+					}
 					for(var k=0;k<w;k++){
 						this.candies[k*h+row].type = -1;
 					}
@@ -990,6 +1082,29 @@
 						}
 					}
 					this.handleMatches();
+				}
+
+
+				this.checkSpecialSwap = function(tileA, tileB){
+					
+					firstCandy = this.tileAtCandy(firstTile);
+					secondCandy = this.tileAtCandy(secondTile);
+					var myLevel = this;
+
+					if(firstCandy.type >= totalDiffCandyType && secondCandy.type >= totalDiffCandyType){
+						setTimeout(function(){
+							if(myLevel.swapAnimating){
+								myLevel.checkSpecialSwap(tileA, tileB);
+							}else{
+								myLevel.removeCross(secondCandy.col, secondCandy.row);
+							
+							}
+							
+						}, 100);
+						return true;
+					}
+					
+					else return false;
 				}
 			}
 
@@ -1139,17 +1254,27 @@
 									}
 									// this is the second tile
 									else{
-										secondTile=this
+										secondTile=this;
+										level.swapOnly = true;
 										// can't pick anymore
 										canPick=false;
 										//switch_pos(firstTile, secondTile);
 										
 										selectedTile = null;
 
-										if(level.checkIfNeighbourTile(firstTile, secondTile))
-										level.swapTiles(firstTile, secondTile);
+										if(level.checkSpecialSwap(firstTile, secondTile)){
+											level.forceSwapTiles(firstTile, secondTile);
+										}
+										else if(level.checkIfNeighbourTile(firstTile, secondTile)){
+											level.swapTiles(firstTile, secondTile);
 
-										resetForCandy();
+										}else{
+											
+										}
+										
+										
+
+										resetForCandy(level);
 										
 										
 									}	
@@ -1160,9 +1285,10 @@
 				}
 				addTileToContainer(level); 
 				requestAnimFrame(animate);
+				//setTimeout(function(){level.handleMatches();}, 500);
 			}
 
-			var resetForCandy = function(){
+			var resetForCandy = function(level){
 				setTimeout(function(){
 					canPick=true;
 					firstTile.alpha=1;
@@ -1172,6 +1298,7 @@
 					firstTile=null;
 					secondTile=null;
 					switch_anim = false;
+					level.swapOnly = false;
 					//check_tiles_all()
 				},500);
 			}
@@ -1184,16 +1311,22 @@
 					level.swapAnim();
 				}
 
+				if(level.specialCandyArr.length !== 0){
+					level.specialCandyAppearAnim();
+				}
+
 				if(level.removeAnimating){
 					level.removeMatchesAnim();
 				}
 
 				if(level.fallingCols.length != 0){
 					level.fallingCandiesAnim();
+					level.swapOnly = false;
 				}
 
 				if(level.topUpCols.length != 0){
 					level.topUpAnim();
+					level.swapOnly = false;
 				}
 				/*
 				if(!level.swapAnimating && !level.removeAnimating && level.fallingCols.length == 0 && level.topUpCols.length == 0){
