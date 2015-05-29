@@ -59,11 +59,11 @@
 
 			var array_test = [
 
-				3,6,7,0,2,
-				0,2,2,3,1,
-				3,1,3,1,1,
-				1,2,3,2,3,
-				1,1,2,1,2,
+				3,5,2,0,2,
+				0,4,2,3,2,
+				3,1,4,1,1,
+				1,2,3,4,3,
+				1,11,2,1,2,
 			]
 /*
 			var array_3 = [
@@ -128,10 +128,33 @@
 			    	else return false;
 			    }
 
+			    this.checkScaleUp = function(){
+			    	if(this.sprite.scale.x < 1.5 && this.sprite.scale.y < 1.5)return true;
+			    	else return false;
+			    }
+
+			    this.checkTransparency = function(){
+			    	if(this.sprite.alpha > 0)return true;
+			    	else return false;
+			    }
+
 			    this.scaleDown = function(){
 			    	if(this.checkScale()){
 			    		this.sprite.scale.x -= 0.15;
 			    		this.sprite.scale.y -= 0.15;
+			    	}
+			    }
+
+			    this.scaleUp = function(){
+			    	if(this.checkScaleUp()){
+			    		this.sprite.scale.x += 0.15;
+			    		this.sprite.scale.y += 0.15;
+			    	}
+			    }
+
+			    this.becomeTransparent = function(){
+			    	if(this.checkTransparency()){
+			    		this.sprite.alpha -= 0.15;
 			    	}
 			    }
 
@@ -586,6 +609,7 @@
 								for(c in nullArr){
 									nullArr[c].sprite.scale.x = 1;
 									nullArr[c].sprite.scale.y = 1;
+									nullArr[c].sprite.alpha = 1;
 									nullArr[c].sprite.position.y = -80+c*-50;
 									nullArr[c].swapToX = nullArr[c].sprite.position.x;
 									nullArr[c].swapToY = arr[len-1].swapToY - pic_space - c*pic_space;
@@ -670,6 +694,7 @@
 							//cols[arr][candy]
 							cols[arr][candy].sprite.scale.x = 1;
 							cols[arr][candy].sprite.scale.y = 1;
+							cols[arr][candy].sprite.alpha = 1;
 							this.setCandyTexture(cols[arr][candy], cols[arr][candy].type);
 							//cols[arr][candy].sprite.texture = PIXI.TextureCache[cols[arr][candy].type];
 
@@ -750,6 +775,7 @@
 							curCandy.animCtrl = 0;
 							curCandy.sprite.scale.x = 1;
 			    			curCandy.sprite.scale.y = 1;
+			    			curCandy.sprite.alpha = 1;
 							this.specialCandyArr.splice(i,1);
 						}
 					}
@@ -775,8 +801,11 @@
 								}).play();*/
 							}
 							//console.log("Shrinking");
-							candy.scaleDown();
-							if(candy.checkScale() == false){
+							//candy.scaleDown();
+							candy.scaleUp();
+							candy.becomeTransparent();
+
+							if(candy.checkTransparency() == false){
 								count ++;
 								if(candy.sprite.scale.x < 0 || candy.sprite.scale.y < 0){
 									candy.sprite.scale.x = candy.sprite.scale.y = 0;
@@ -865,6 +894,65 @@
 					});
 				}
 
+				this.formChain = function(chainType, target, res, depth, handledTargets){
+					if(depth >= 5)return;
+
+					var tmpChain = new Chain(chainType);
+					var arr;
+					if(chainType === 1) arr = _.where(this.candies, {col:target.col});
+					else arr = _.where(this.candies, {row:target.row});
+								
+					for(var j=0; j<arr.length; j++){
+								if(this.specialCandyArr.indexOf(arr[j]) > -1)continue;
+								if(Math.floor(arr[j].type / totalDiffCandyType) === 1 && handledTargets.indexOf(arr[j]) === -1){
+									handledTargets.push(arr[j]);
+									this.formChain(1, arr[j], res, depth+1,handledTargets);
+								}
+								if(Math.floor(arr[j].type / totalDiffCandyType) === 2 && handledTargets.indexOf(arr[j]) === -1){
+									handledTargets.push(arr[j]);
+									this.formChain(2, arr[j], res, depth+1,handledTargets);
+								}
+								tmpChain.addCandy(arr[j]);
+
+					}
+					res.push(tmpChain);
+					
+				}
+
+				this.chainReaction = function(chains, extraChains, myLevel, depth){
+					if(depth >= 5)return;
+
+					chains.forEach(function(chain) {
+						var targets = _.filter(chain.candies,function(v){
+						  return Math.floor(v.type / totalDiffCandyType) === 1;
+						});
+						for(var i=0;i<targets.length;i++){
+
+							var res = [];
+							var handledTargets = [];
+							handledTargets.push(targets[i]);
+							myLevel.formChain(1, targets[i], res, 0, handledTargets);
+							for(var j=0;j<res.length;j++){
+								extraChains.push( res[j] );
+							}
+							
+						}
+
+						targets = _.filter(chain.candies,function(v){
+						  return Math.floor(v.type / totalDiffCandyType) === 2;
+						});
+						for(var i=0;i<targets.length;i++){
+							var res = [];
+							var handledTargets = [];
+							handledTargets.push(targets[i]);
+							myLevel.formChain(2, targets[i], res, 0, handledTargets);
+							for(var j=0;j<res.length;j++){
+								extraChains.push( res[j] );
+							}
+						}
+					});
+
+				}
 				this.handleMatches = function(){
 					var myLevel = this;
 					var chains = this.removeMatches();
@@ -872,33 +960,8 @@
 					var myLevel = this;
 					var extraChains = [];
 					this.handleSpecialInChains(chains);
-					chains.forEach(function(chain) {
-						var targets = _.filter(chain.candies,function(v){
-						  return Math.floor(v.type / totalDiffCandyType) === 1;
-						});
-						for(var i=0;i<targets.length;i++){
-
-							var tmpChain = new Chain(1);
-							var arr = _.where(myLevel.candies, {col:targets[i].col});
-							for(var j=0; j<arr.length; j++){
-								if(myLevel.specialCandyArr.indexOf(arr[j]) > -1)continue;
-								tmpChain.addCandy(arr[j]);
-							}
-							extraChains.push( tmpChain );
-						}
-						targets = _.filter(chain.candies,function(v){
-						  return Math.floor(v.type / totalDiffCandyType) === 2;
-						});
-						for(var i=0;i<targets.length;i++){
-							var tmpChain = new Chain(2);
-							var arr = _.where(myLevel.candies, {row:targets[i].row});
-							for(var j=0; j<arr.length; j++){
-								if(myLevel.specialCandyArr.indexOf(arr[j]) > -1)continue;
-								tmpChain.addCandy(arr[j]);
-							}
-							extraChains.push( tmpChain );
-						}
-					});
+					//here
+					this.chainReaction(chains, extraChains, myLevel, 0);
 					extraChains.forEach(function(chain) {
 						chains.add(chain);
 					});
@@ -1225,6 +1288,7 @@
 									if(selectedTile!=null){
 										selectedTile.scale.x = 1;
 										selectedTile.scale.y = 1;
+										selectedTile.alpha = 1;
 									}
 									selectedTile = this;
 									
@@ -1291,8 +1355,8 @@
 			var resetForCandy = function(level){
 				setTimeout(function(){
 					canPick=true;
-					firstTile.alpha=1;
-					secondTile.alpha=1;
+					//firstTile.alpha=1;
+					//secondTile.alpha=1;
 					firstTile.isSelected=false;
 					secondTile.isSelected=false;
 					firstTile=null;
