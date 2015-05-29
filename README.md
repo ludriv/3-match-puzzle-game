@@ -4,7 +4,7 @@ I am trying to create a 3-match game like Candy Crush, currently the basic funct
 Demo GIF
 --------
 ![alt tag](https://github.com/weiqing/3-match-pixijs/blob/develop/demo2.gif)
-Updated gif with special candy.
+<br>Updated gif with special candy.
 
 Setup
 -----
